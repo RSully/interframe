@@ -11,6 +11,7 @@
 		2BBA8A1218EF399500527038 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 2BBA8A1118EF399500527038 /* main.m */; };
 		2BBA8A1618EF399500527038 /* HFR.1 in CopyFiles */ = {isa = PBXBuildFile; fileRef = 2BBA8A1518EF399500527038 /* HFR.1 */; };
 		2BBA8A1F18EF3B0E00527038 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2BBA8A1E18EF3B0E00527038 /* AVFoundation.framework */; };
+		2BBA8A2118F0B56800527038 /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2BBA8A2018F0B56800527038 /* AppKit.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -34,6 +35,7 @@
 		2BBA8A1518EF399500527038 /* HFR.1 */ = {isa = PBXFileReference; lastKnownFileType = text.man; path = HFR.1; sourceTree = "<group>"; };
 		2BBA8A1C18EF39A100527038 /* QTKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QTKit.framework; path = System/Library/Frameworks/QTKit.framework; sourceTree = SDKROOT; };
 		2BBA8A1E18EF3B0E00527038 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
+		2BBA8A2018F0B56800527038 /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -41,6 +43,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2BBA8A2118F0B56800527038 /* AppKit.framework in Frameworks */,
 				2BBA8A1F18EF3B0E00527038 /* AVFoundation.framework in Frameworks */,
 				2BBA8A0F18EF399500527038 /* Foundation.framework in Frameworks */,
 			);
@@ -69,6 +72,7 @@
 		2BBA8A0D18EF399500527038 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				2BBA8A2018F0B56800527038 /* AppKit.framework */,
 				2BBA8A1E18EF3B0E00527038 /* AVFoundation.framework */,
 				2BBA8A1C18EF39A100527038 /* QTKit.framework */,
 				2BBA8A0E18EF399500527038 /* Foundation.framework */,
