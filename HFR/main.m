@@ -17,51 +17,82 @@ int main(int argc, const char * argv[])
         NSError *err = nil;
 
         NSURL *input = [NSURL fileURLWithPath:@""];
-//        NSURL *output = [NSURL URLWithString:@""];
+        NSURL *output = [NSURL fileURLWithPath:@""];
 
         AVURLAsset *inputAsset = [AVURLAsset URLAssetWithURL:input options:@{}];
+        AVAssetTrack *inputAssetVideo = [inputAsset tracksWithMediaType:AVMediaTypeVideo][0];
 
-        AVAssetReader *inputReader = [[AVAssetReader alloc] initWithAsset:inputAsset error:&err];
-        NSDictionary *videoSettings = @{
-            (NSString*)kCVPixelBufferPixelFormatTypeKey: @(kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange)
-        };
-        //kCVPixelFormatType_32RGBA
-        //kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange
-        AVAssetTrack *inputTrack = [inputAsset tracksWithMediaType:AVMediaTypeVideo][0];
-        AVAssetReaderOutput *inputOutput = [AVAssetReaderTrackOutput assetReaderTrackOutputWithTrack:inputTrack
-                                                                                outputSettings:videoSettings];
-        [inputReader addOutput:inputOutput];
-        [inputReader startReading];
+        // Using ceil because you can't have fraction of a frame
+        // There *must* be a better way to get the amount of frames, I mean c'mon!
+        NSUInteger inputFrameCount = ceil(inputAssetVideo.nominalFrameRate * CMTimeGetSeconds(inputAsset.duration));
+        NSLog(@"Frame count: %lu (%f fps)", inputFrameCount, inputAssetVideo.nominalFrameRate);
+        float inputFramePerSecond = inputAssetVideo.nominalFrameRate;
+        // Frame amount is 2x-1 because we can only generate inbetween, not perfect double
+        NSUInteger outputFrameCount = (inputFrameCount * 2.0) - 1;
+        float outputFramePerSecond = inputFramePerSecond * 2.0;
+
+        // Create an output composition, I guess?
+        AVMutableComposition *outputComp = [AVMutableComposition composition];
+        AVMutableCompositionTrack *outputTrack = [outputComp addMutableTrackWithMediaType:AVMediaTypeVideo preferredTrackID:kCMPersistentTrackID_Invalid];
+
+        // Create an image generator
+        AVAssetImageGenerator *outputGenerator = [[AVAssetImageGenerator alloc] initWithAsset:outputComp];
 
 
-        while (inputReader.status == AVAssetReaderStatusReading)
+        for (NSUInteger frame = 2; frame < outputFrameCount; frame += 2)
         {
-            CMSampleBufferRef sampleBuffer = [inputOutput copyNextSampleBuffer];
-            if (sampleBuffer)
-            {
-                CVImageBufferRef imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer);
-                CVPixelBufferLockBaseAddress(imageBuffer, 0);
+            if (frame > 500) break;
 
-                uint8_t *baseAddress = (uint8_t *)CVPixelBufferGetBaseAddressOfPlane(imageBuffer, 0);
-                size_t bytesPerRow = CVPixelBufferGetBytesPerRow(imageBuffer);
-                size_t width = CVPixelBufferGetWidth(imageBuffer);
-                size_t height = CVPixelBufferGetHeight(imageBuffer);
-                CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
+            // math         explain                 output      input
+            // -----------------------------------------------------------
+            // frame - 2 = first source frame   // 0 2 4    // 0 1 2
+            // frame - 1 = inbetween frame      // 1 3 5    //
+            // frame - 0 = last source frame    // 2 4 6    // 1 2 3
+            // -----------------------------------------------------------
 
-                CGContextRef newContext = CGBitmapContextCreate(baseAddress, width, height, 8, bytesPerRow, colorSpace, kCGBitmapByteOrder32Little | kCGImageAlphaPremultipliedFirst);
-                CGImageRef newImage = CGBitmapContextCreateImage(newContext);
-                CGContextRelease(newContext); 
-                
-                CGColorSpaceRelease(colorSpace);
+            // Frame numbers
+            NSUInteger firstFrame = frame - 2;
+            NSUInteger inbetweenFrame = frame - 1;
+            NSUInteger lastFrame = frame;
+            NSUInteger firstFrameSource = firstFrame / 2;
+            NSUInteger lastFrameSource = lastFrame / 2;
 
-                CVPixelBufferUnlockBaseAddress(imageBuffer, 0);
-                CFRelease(sampleBuffer);
+            // Frame times
+            CMTime firstFrameTime = CMTimeMake(firstFrame, outputFramePerSecond);
+            CMTime inbetweenFrameTime = CMTimeMake(inbetweenFrame, outputFramePerSecond);
+            CMTime lastFrameTime = CMTimeMake(lastFrame, outputFramePerSecond);
+            CMTime firstFrameTimeSource = CMTimeMake(firstFrameSource, inputFramePerSecond);
+            CMTime lastFrameTimeSource = CMTimeMake(lastFrameSource, inputFramePerSecond);
 
-                NSLog(@"%@", [[NSImage alloc] initWithCGImage:newImage size:NSMakeSize(width, height)]);
-            }
+            // Think this is right for "duration" of 1 frame
+            CMTime timeRangeFrame = CMTimeMake(1, outputFramePerSecond);
+            CMTime timeRangeFrameSource = CMTimeMake(1, inputFramePerSecond);
+
+            CMTimeRange inbetweenFrameTimeRange = CMTimeRangeMake(inbetweenFrameTime, timeRangeFrame);
+            CMTimeRange firstFrameTimeRangeSource = CMTimeRangeMake(firstFrameTimeSource, timeRangeFrameSource);
+            CMTimeRange lastFrameTimeRangeSource = CMTimeRangeMake(lastFrameTimeSource, timeRangeFrameSource);
+
+            BOOL okFirst = [outputTrack insertTimeRange:firstFrameTimeRangeSource ofTrack:inputAssetVideo atTime:firstFrameTime error:&err];
+            BOOL okLast = [outputTrack insertTimeRange:lastFrameTimeRangeSource ofTrack:inputAssetVideo atTime:lastFrameTime error:&err];
+
+            [outputTrack insertEmptyTimeRange:inbetweenFrameTimeRange];
+
+            CGImage firstImg = [outputGenerator copyCGImageAtTime:firstFrameTime actualTime:nil error:&err];
+            CGImage lastImg = [outputGenerator copyCGImageAtTime:lastFrameTime actualTime:nil error:&err];]
+
         }
-        NSLog(@"%@", inputReader.error);
-        
+
+
+//        NSLog(@"Presets: %@", [AVAssetExportSession exportPresetsCompatibleWithAsset:outputComp]);
+//        AVAssetExportSession *export = [AVAssetExportSession exportSessionWithAsset:outputComp presetName:AVAssetExportPresetPassthrough];
+//        export.outputFileType = AVFileTypeMPEG4;
+//        export.outputURL = output;
+//        [export exportAsynchronouslyWithCompletionHandler:^{
+//            NSLog(@".. done?");
+//        }];
+
+        [[NSRunLoop currentRunLoop] run];
+
     }
     return 0;
 }
