@@ -75,10 +75,10 @@ int main(int argc, const char * argv[])
             BOOL okFirst = [outputTrack insertTimeRange:firstFrameTimeRangeSource ofTrack:inputAssetVideo atTime:firstFrameTime error:&err];
             BOOL okLast = [outputTrack insertTimeRange:lastFrameTimeRangeSource ofTrack:inputAssetVideo atTime:lastFrameTime error:&err];
 
-            [outputTrack insertEmptyTimeRange:inbetweenFrameTimeRange];
-
-            CGImage firstImg = [outputGenerator copyCGImageAtTime:firstFrameTime actualTime:nil error:&err];
-            CGImage lastImg = [outputGenerator copyCGImageAtTime:lastFrameTime actualTime:nil error:&err];]
+            CGImageRef firstImg = [outputGenerator copyCGImageAtTime:firstFrameTime actualTime:nil error:&err];
+            CGImageRef lastImg = [outputGenerator copyCGImageAtTime:lastFrameTime actualTime:nil error:&err];
+            // This is where we would call our generator:
+            CGImageRef inbetweenImg = CGImageCreateCopy(lastImg);
 
         }
 
