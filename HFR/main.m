@@ -143,7 +143,7 @@ int main(int argc, const char * argv[])
             CGImageRelease(firstImg);
         }
 
-        NSLog(@"Beginning export");
+        NSLog(@"Finished main conversion");
 
         // Might need this for adding audio?
         // http://stackoverflow.com/questions/5640657/avfoundation-assetwriter-generate-movie-with-images-and-audio
@@ -156,7 +156,10 @@ int main(int argc, const char * argv[])
 //            NSLog(@".. done?");
 //        }];
 //
+//        NSLog(@"Running runloop");
 //        [[NSRunLoop currentRunLoop] run];
+
+        NSLog(@"Exiting...");
 
     }
     return 0;
