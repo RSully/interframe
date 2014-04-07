@@ -10,7 +10,7 @@
 #import <AVFoundation/AVFoundation.h>
 #import <AppKit/AppKit.h>
 
-#define kRSUBitmapInfo (kCGBitmapByteOrder32Little | kCGImageAlphaPremultipliedFirst)
+#define kRSFIBitmapInfo (kCGBitmapByteOrder32Little | kCGImageAlphaPremultipliedFirst)
 
 
 @interface RSFrameInterpolator ()
@@ -28,6 +28,8 @@
 @property NSUInteger inputFrameCount;
 
 // Output writer
+@property (strong) AVAssetWriter *outputWriter;
+@property (strong) AVAssetWriterInput *outputWriterInput;
 @property (strong) AVAssetWriterInputPixelBufferAdaptor *outputWriterInputAdapter;
 // Output metadata
 @property float outputFPS;
@@ -38,7 +40,7 @@
 
 @implementation RSFrameInterpolator
 
--(id)initWithAsset:(AVAsset *)asset {
+-(id)initWithAsset:(AVAsset *)asset output:(NSURL *)output {
     if ((self = [self init]))
     {
         NSError *error = nil;
@@ -59,17 +61,101 @@
         self.inputAssetVideoReader = [[AVAssetReader alloc] initWithAsset:self.inputAsset error:&error];
         if (error)
         {
+            // TODO: better error system
             @throw [NSException exceptionWithName:@"RSFIException" reason:@"Failed to instantiate inputAssetVideoReader" userInfo:@{@"error": error}];
         }
         self.inputAssetVideoReaderOutput = [AVAssetReaderTrackOutput assetReaderTrackOutputWithTrack:self.inputAssetVideoTrack
                                                                                       outputSettings:self.defaultPixelSettings];
         [self.inputAssetVideoReader addOutput:self.inputAssetVideoReaderOutput];
+
+        // Setup output writer
+        NSString *fileType = CFBridgingRelease(UTTypeCreatePreferredIdentifierForTag(kUTTagClassFilenameExtension, (__bridge CFStringRef)([output pathExtension]), NULL));
+        self.outputWriter = [[AVAssetWriter alloc] initWithURL:output fileType:fileType error:&error];
+        NSDictionary *outputSettings = @{AVVideoCodecKey: AVVideoCodecH264};
+        self.outputWriterInput = [[AVAssetWriterInput alloc] initWithMediaType:AVMediaTypeVideo outputSettings:outputSettings];
+        self.outputWriterInputAdapter = [[AVAssetWriterInputPixelBufferAdaptor alloc] initWithAssetWriterInput:self.outputWriterInput
+                                                                                   sourcePixelBufferAttributes:self.defaultPixelSettings];
+        [self.outputWriter addInput:self.outputWriterInput];
     }
     return self;
 }
 
 -(void)interpolate {
-    // LOGICCCC
+
+    BOOL readingOK = [self.inputAssetVideoReader startReading];
+    if (!readingOK)
+    {
+        @throw [NSException exceptionWithName:@"RSFIException" reason:@"Failed to read inputAssetVideoReader" userInfo:nil];
+    }
+    BOOL writingOK = [self.outputWriter startWriting];
+    if (!writingOK)
+    {
+        @throw [NSException exceptionWithName:@"RSFIException" reason:@"Failed to write outputWriter" userInfo:nil];
+    }
+    [self.outputWriter startSessionAtSourceTime:kCMTimeZero];
+
+    NSUInteger framePrior, frameInbetween, frameNext;
+    NSUInteger framePriorInput, frameNextInput;
+    CMSampleBufferRef sampleBufferPrior = NULL, sampleBufferNext = NULL;
+    CVPixelBufferRef pixelBufferPrior = NULL, pixelBufferInbetween = NULL, pixelBufferNext = NULL;
+    CGImageRef imagePrior = NULL, imageInbetween = NULL, imageNext = NULL;
+    CMTime timePrior, timeInbetween, timeNext;
+
+    // expr         explain                 output      input
+    // -----------------------------------------------------------
+    // frame - 2 = first source frame   // 0 2 4    // 0 1 2
+    // frame - 1 = inbetween frame      // 1 3 5    //
+    // frame - 0 = last source frame    // 2 4 6    // 1 2 3
+    // -----------------------------------------------------------
+    for (NSUInteger frame = 2; frame < self.outputFrameCount; frame += 2)
+    {
+        // TODO: remove, debug only
+        if (frame > 400) break;
+
+        // Frame numbers for output
+        framePrior = frame - 2;
+        frameInbetween = frame - 1;
+        frameNext = frame;
+
+        // Frame numbers for input
+        framePriorInput = framePrior / 2;
+        frameNextInput = frameNext / 2;
+
+
+        // Handle first frame special
+        if (framePrior == 0)
+        {
+            sampleBufferPrior = [self.inputAssetVideoReaderOutput copyNextSampleBuffer];
+            pixelBufferPrior = CMSampleBufferGetImageBuffer(sampleBufferPrior);
+
+            imagePrior = [self createCGImageFromPixelBuffer:pixelBufferPrior];
+
+            // We don't want to duplicate writes, so do it here
+            [self.outputWriterInputAdapter appendPixelBuffer:pixelBufferPrior withPresentationTime:timePrior];
+        }
+
+        sampleBufferNext = [self.inputAssetVideoReaderOutput copyNextSampleBuffer];
+        pixelBufferNext = CMSampleBufferGetImageBuffer(sampleBufferNext);
+        imageNext = [self createCGImageFromPixelBuffer:pixelBufferNext];
+
+
+        // TODO: delegate this logic to interpolator
+        imageInbetween = CGImageCreateCopy(imagePrior);
+
+
+        [self.outputWriterInputAdapter appendPixelBuffer:pixelBufferInbetween withPresentationTime:timeInbetween];
+        [self.outputWriterInputAdapter appendPixelBuffer:pixelBufferNext withPresentationTime:timeNext];
+
+
+        // We need to hang onto pixelBufferNext, imageNext
+        // by extension we need to hang onto sampleBufferNext to release it
+        // These all need to go to "prior" vars
+        pixelBufferPrior = pixelBufferNext;
+        CGImageRelease(imagePrior), imagePrior = imageNext;
+        CFRelease(sampleBufferPrior), sampleBufferPrior = sampleBufferNext;
+
+    }
+
 }
 
 /**
@@ -91,7 +177,7 @@
     CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
 
     // Create a context from pixelBuffer to get a CGImage
-    CGContextRef context = CGBitmapContextCreate(baseAddress, width, height, 8, bytesPerRow, colorSpace, kRSUBitmapInfo);
+    CGContextRef context = CGBitmapContextCreate(baseAddress, width, height, 8, bytesPerRow, colorSpace, kRSFIBitmapInfo);
     // Fetch the image
     CGImageRef image = CGBitmapContextCreateImage(context);
 
