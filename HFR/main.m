@@ -34,16 +34,62 @@ CGImageRef CreateImageFromSampleBuffer(CMSampleBufferRef sampleBuffer)
     CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
 
     // Create a context from samplebuffer to get CGImage
-    CGContextRef newContext = CGBitmapContextCreate(baseAddress, width, height, 8, bytesPerRow, colorSpace, kCGBitmapByteOrder32Little | kCGImageAlphaPremultipliedFirst);
-    CGImageRef newImage = CGBitmapContextCreateImage(newContext);
+    CGContextRef context = CGBitmapContextCreate(baseAddress, width, height, 8, bytesPerRow, colorSpace, kCGBitmapByteOrder32Little | kCGImageAlphaPremultipliedFirst);
+    CGImageRef image = CGBitmapContextCreateImage(context);
 
     // Cleanup
-    CGContextRelease(newContext);
+    CGContextRelease(context);
     CGColorSpaceRelease(colorSpace);
     CVPixelBufferUnlockBaseAddress(imageBuffer, 0);
 
-    return newImage;
+    return image;
 }
+CVPixelBufferRef ImageBufferForImage(CGImageRef image)
+{
+    // https://github.com/unixpickle/VideoExporter/blob/master/AVExportTest/VideoExporter.m
+    // http://stackoverflow.com/questions/3741323/how-do-i-export-uiimage-array-as-a-movie/3742212#3742212
+
+    // Later on we should use a pool thing for efficiency
+//    NSDictionary *pixelAttributes = @{(NSString *)kCVPixelBufferPixelFormatTypeKey: @(kCVPixelFormatType_32BGRA)};
+//    AVAssetWriterInputPixelBufferAdaptor *adaptor = [[AVAssetWriterInputPixelBufferAdaptor alloc] initWithAssetWriterInput:nil
+//                                                                                               sourcePixelBufferAttributes:pixelAttributes];
+//
+//    CVImageBufferRef imageBuffer = NULL;
+//    CVReturn status = CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, adaptor.pixelBufferPool, &imageBuffer);
+
+    size_t imageWidth = CGImageGetWidth(image);
+    size_t imageHeight = CGImageGetHeight(image);
+    NSDictionary *options = @{(NSString *)kCVPixelBufferCGImageCompatibilityKey: @(YES), (NSString *)kCVPixelBufferCGBitmapContextCompatibilityKey: @(YES)};
+
+    CVPixelBufferRef imageBuffer = NULL;
+    CVReturn status = CVPixelBufferCreate(kCFAllocatorDefault, imageWidth, imageHeight, kCVPixelFormatType_32BGRA, (__bridge CFDictionaryRef)(options), &imageBuffer);
+    if (status != 0) return NULL;
+
+    CVPixelBufferLockBaseAddress(imageBuffer, 0);
+
+    // Get information of the image
+    uint8_t *baseAddress = (uint8_t *)CVPixelBufferGetBaseAddressOfPlane(imageBuffer, 0);
+    size_t bytesPerRow = CVPixelBufferGetBytesPerRow(imageBuffer);
+    size_t width = CVPixelBufferGetWidth(imageBuffer);
+    size_t height = CVPixelBufferGetHeight(imageBuffer);
+
+    // Using device RGB - is this best?
+    CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
+
+    // Create a context where the pixelbuffer is
+    CGContextRef context = CGBitmapContextCreate(baseAddress, width, height, 8, bytesPerRow, colorSpace, kCGBitmapByteOrder32Little | kCGImageAlphaPremultipliedFirst);
+
+    // Draw the image on the pixel data
+    CGContextDrawImage(context, CGRectMake(0, 0, width, height), image);
+
+    // Cleanup
+    CGContextRelease(context);
+    CGColorSpaceRelease(colorSpace);
+    CVPixelBufferUnlockBaseAddress(imageBuffer, 0);
+
+    return imageBuffer;
+}
+
 
 int main(int argc, const char * argv[])
 {
