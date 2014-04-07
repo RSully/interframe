@@ -70,7 +70,15 @@
         // Setup output writer
         NSString *fileType = CFBridgingRelease(UTTypeCreatePreferredIdentifierForTag(kUTTagClassFilenameExtension, (__bridge CFStringRef)([output pathExtension]), NULL));
         self.outputWriter = [[AVAssetWriter alloc] initWithURL:output fileType:fileType error:&error];
-        NSDictionary *outputSettings = @{AVVideoCodecKey: AVVideoCodecH264, AVVideoHeightKey: @(self.inputAssetVideoTrack.naturalSize.height), AVVideoWidthKey: @(self.inputAssetVideoTrack.naturalSize.width)};
+        NSDictionary *outputSettings = @{
+                                         AVVideoCodecKey: AVVideoCodecH264,
+                                         AVVideoHeightKey: @(self.inputAssetVideoTrack.naturalSize.height),
+                                         AVVideoWidthKey: @(self.inputAssetVideoTrack.naturalSize.width),
+//                                         AVVideoCompressionPropertiesKey: @{
+//                                                 AVVideoProfileLevelKey: AVVideoProfileLevelH264High41,
+//                                                 AVVideoAverageBitRateKey: @(5000)
+//                                                 }
+                                         };
         self.outputWriterInput = [[AVAssetWriterInput alloc] initWithMediaType:AVMediaTypeVideo outputSettings:outputSettings];
         self.outputWriterInputAdapter = [[AVAssetWriterInputPixelBufferAdaptor alloc] initWithAssetWriterInput:self.outputWriterInput
                                                                                    sourcePixelBufferAttributes:self.defaultPixelSettings];
@@ -79,6 +87,11 @@
     return self;
 }
 
+
+-(CGImageRef)createInterpolatedImageFromPrior:(CGImageRef)imagePrior andNext:(CGImageRef)imageNext {
+    // TODO: delegate this logic to interpolator
+    return CGImageCreateCopy(imagePrior);
+}
 -(void)interpolate {
 
     BOOL readingOK = [self.inputAssetVideoReader startReading];
@@ -94,7 +107,6 @@
     [self.outputWriter startSessionAtSourceTime:kCMTimeZero];
 
     NSUInteger framePrior, frameInbetween, frameNext;
-    NSUInteger framePriorInput, frameNextInput;
     CMSampleBufferRef sampleBufferPrior = NULL, sampleBufferNext = NULL;
     CVPixelBufferRef pixelBufferPrior = NULL, pixelBufferInbetween = NULL, pixelBufferNext = NULL;
     CGImageRef imagePrior = NULL, imageInbetween = NULL, imageNext = NULL;
@@ -115,10 +127,6 @@
         framePrior = frame - 2;
         frameInbetween = frame - 1;
         frameNext = frame;
-
-        // Frame numbers for input
-        framePriorInput = framePrior / 2;
-        frameNextInput = frameNext / 2;
 
         // Frame times
         timePrior = CMTimeMakeWithSeconds(framePrior / self.outputFPS, NSEC_PER_SEC);
@@ -144,16 +152,11 @@
         imageNext = [self createCGImageFromPixelBuffer:pixelBufferNext];
 
 
-        // TODO: delegate this logic to interpolator
-        assert(imagePrior);assert(imageNext);
-        imageInbetween = CGImageCreateCopy(imagePrior);
+        imageInbetween = [self createInterpolatedImageFromPrior:imagePrior andNext:imageNext];
         pixelBufferInbetween = [self createPixelBufferFromCGImage:imageInbetween];
 
 
-        if (pixelBufferInbetween)
-        {
-            [self lazilyAppendPixelBuffer:pixelBufferInbetween withPresentationTime:timeInbetween];
-        }
+        [self lazilyAppendPixelBuffer:pixelBufferInbetween withPresentationTime:timeInbetween];
         [self lazilyAppendPixelBuffer:pixelBufferNext withPresentationTime:timeNext];
 
 
@@ -167,11 +170,8 @@
 
     }
 
-    if (imageNext) {
-        CGImageRelease(imageNext), imageNext = NULL;
-    }
-    if (sampleBufferNext) {
-        CFRelease(sampleBufferNext), sampleBufferNext = NULL;
+    if (imagePrior) {
+        CGImageRelease(imagePrior), imagePrior = NULL;
     }
 
     NSLog(@"Going to finish writing...");
@@ -216,7 +216,7 @@
  */
 -(CVPixelBufferRef)createPixelBufferFromCGImage:(CGImageRef)image {
     CVPixelBufferRef pixelBuffer = NULL;
-    CVReturn status = CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, self.outputWriterInputAdapter.pixelBufferPool, &pixelBuffer);
+    CVReturn status = CVPixelBufferPoolCreatePixelBuffer(NULL, self.outputWriterInputAdapter.pixelBufferPool, &pixelBuffer);
     if (status != 0) return NULL;
 
     CVPixelBufferLockBaseAddress(pixelBuffer, 0);
