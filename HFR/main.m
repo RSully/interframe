@@ -49,6 +49,7 @@ int main(int argc, const char * argv[])
         CMTime timeRangeFrame = CMTimeMake(1, outputFramePerSecond);
         CMTime timeRangeFrameSource = CMTimeMake(1, inputFramePerSecond);
 
+        CGImageRef firstImg = NULL, inbetweenImg = NULL, lastImg = NULL;
 
         for (NSUInteger frame = 2; frame < outputFrameCount; frame += 2)
         {
@@ -88,18 +89,28 @@ int main(int argc, const char * argv[])
                 {
                     NSLog(@"okFirst is false %@", err);
                 }
+
+                firstImg = [outputGenerator copyCGImageAtTime:firstFrameTime actualTime:nil error:&err];
             }
+
             BOOL okLast = [outputTrack insertTimeRange:lastFrameTimeRangeSource ofTrack:inputAssetVideo atTime:lastFrameTime error:&err];
             if (!okLast)
             {
                 NSLog(@"okLast is false %@", err);
             }
 
-            // TODO: we can save effort here by not re-fetching the firstImg and reusing lastImg from previous iteration
-            CGImageRef firstImg = [outputGenerator copyCGImageAtTime:firstFrameTime actualTime:nil error:&err];
-            CGImageRef lastImg = [outputGenerator copyCGImageAtTime:lastFrameTime actualTime:nil error:&err];
-            CGImageRef inbetweenImg = CreateInbetweenFrame(firstImg, lastImg);
+            lastImg = [outputGenerator copyCGImageAtTime:lastFrameTime actualTime:nil error:&err];
+            inbetweenImg = CreateInbetweenFrame(firstImg, lastImg);
 
+
+            CGImageRelease(firstImg), firstImg = NULL;
+            CGImageRelease(inbetweenImg), inbetweenImg = NULL;
+            firstImg = lastImg, lastImg = NULL;
+        }
+
+        if (firstImg)
+        {
+            CGImageRelease(firstImg);
         }
 
         NSLog(@"Beginning export");
