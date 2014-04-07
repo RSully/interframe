@@ -10,6 +10,11 @@
 		2B16EB0F18F33888000BA5AD /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2B16EB0E18F33888000BA5AD /* Foundation.framework */; };
 		2B16EB1218F33888000BA5AD /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 2B16EB1118F33888000BA5AD /* main.m */; };
 		2B16EB1618F33888000BA5AD /* interframe.1 in CopyFiles */ = {isa = PBXBuildFile; fileRef = 2B16EB1518F33888000BA5AD /* interframe.1 */; };
+		2B16EB1D18F33980000BA5AD /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2B16EB1C18F33980000BA5AD /* AppKit.framework */; };
+		2B16EB1F18F33985000BA5AD /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2B16EB1E18F33985000BA5AD /* AVFoundation.framework */; };
+		2B16EB2218F339DC000BA5AD /* RSFrameInterpolator.m in Sources */ = {isa = PBXBuildFile; fileRef = 2B16EB2118F339DC000BA5AD /* RSFrameInterpolator.m */; };
+		2B16EB2518F34167000BA5AD /* RSFrameInterpolationState.m in Sources */ = {isa = PBXBuildFile; fileRef = 2B16EB2418F34167000BA5AD /* RSFrameInterpolationState.m */; };
+		2B16EB2718F3439D000BA5AD /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2B16EB2618F3439D000BA5AD /* CoreGraphics.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -31,6 +36,13 @@
 		2B16EB1118F33888000BA5AD /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 		2B16EB1418F33888000BA5AD /* interframe-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "interframe-Prefix.pch"; sourceTree = "<group>"; };
 		2B16EB1518F33888000BA5AD /* interframe.1 */ = {isa = PBXFileReference; lastKnownFileType = text.man; path = interframe.1; sourceTree = "<group>"; };
+		2B16EB1C18F33980000BA5AD /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
+		2B16EB1E18F33985000BA5AD /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
+		2B16EB2018F339DC000BA5AD /* RSFrameInterpolator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RSFrameInterpolator.h; sourceTree = "<group>"; };
+		2B16EB2118F339DC000BA5AD /* RSFrameInterpolator.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = RSFrameInterpolator.m; sourceTree = "<group>"; };
+		2B16EB2318F34167000BA5AD /* RSFrameInterpolationState.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RSFrameInterpolationState.h; sourceTree = "<group>"; };
+		2B16EB2418F34167000BA5AD /* RSFrameInterpolationState.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = RSFrameInterpolationState.m; sourceTree = "<group>"; };
+		2B16EB2618F3439D000BA5AD /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -38,6 +50,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2B16EB2718F3439D000BA5AD /* CoreGraphics.framework in Frameworks */,
+				2B16EB1F18F33985000BA5AD /* AVFoundation.framework in Frameworks */,
+				2B16EB1D18F33980000BA5AD /* AppKit.framework in Frameworks */,
 				2B16EB0F18F33888000BA5AD /* Foundation.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -65,6 +80,9 @@
 		2B16EB0D18F33888000BA5AD /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				2B16EB2618F3439D000BA5AD /* CoreGraphics.framework */,
+				2B16EB1E18F33985000BA5AD /* AVFoundation.framework */,
+				2B16EB1C18F33980000BA5AD /* AppKit.framework */,
 				2B16EB0E18F33888000BA5AD /* Foundation.framework */,
 			);
 			name = Frameworks;
@@ -74,6 +92,10 @@
 			isa = PBXGroup;
 			children = (
 				2B16EB1118F33888000BA5AD /* main.m */,
+				2B16EB2018F339DC000BA5AD /* RSFrameInterpolator.h */,
+				2B16EB2118F339DC000BA5AD /* RSFrameInterpolator.m */,
+				2B16EB2318F34167000BA5AD /* RSFrameInterpolationState.h */,
+				2B16EB2418F34167000BA5AD /* RSFrameInterpolationState.m */,
 				2B16EB1518F33888000BA5AD /* interframe.1 */,
 				2B16EB1318F33888000BA5AD /* Supporting Files */,
 			);
@@ -139,6 +161,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2B16EB2518F34167000BA5AD /* RSFrameInterpolationState.m in Sources */,
+				2B16EB2218F339DC000BA5AD /* RSFrameInterpolator.m in Sources */,
 				2B16EB1218F33888000BA5AD /* main.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -253,6 +277,7 @@
 				2B16EB1B18F33888000BA5AD /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};

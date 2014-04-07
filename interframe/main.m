@@ -7,15 +7,24 @@
 //
 
 #import <Foundation/Foundation.h>
+#import "RSFrameInterpolator.h"
 
 int main(int argc, const char * argv[])
 {
 
     @autoreleasepool {
-        
-        // insert code here...
-        NSLog(@"Hello, World!");
-        
+
+        if (argc != 3)
+        {
+            printf("Usage: %s <input> <output>\n", argv[0]);
+            return 0;
+        }
+
+        NSURL *inputUrl = [NSURL fileURLWithPath:[NSString stringWithUTF8String:argv[1]]];
+        NSURL *outputUrl = [NSURL fileURLWithPath:[NSString stringWithUTF8String:argv[2]]];
+
+        AVURLAsset *input = [AVURLAsset assetWithURL:inputUrl];
+
     }
     return 0;
 }
