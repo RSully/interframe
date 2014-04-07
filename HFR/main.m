@@ -61,12 +61,14 @@ int main(int argc, const char * argv[])
         NSUInteger outputFrameCount = (inputFrameCount * 2.0) - 1;
         float outputFramePerSecond = inputFramePerSecond * 2.0;
 
-        // Create an output composition, I guess?
-        AVMutableComposition *outputComp = [AVMutableComposition composition];
-        AVMutableCompositionTrack *outputTrack = [outputComp addMutableTrackWithMediaType:AVMediaTypeVideo preferredTrackID:kCMPersistentTrackID_Invalid];
 
-        // Create an image generator
-        AVAssetImageGenerator *outputGenerator = [[AVAssetImageGenerator alloc] initWithAsset:outputComp];
+        // Reader
+        AVAssetReader *inputAssetVideoReader = [[AVAssetReader alloc] initWithAsset:inputAsset error:&err];
+        NSDictionary *inputAssetVideoReaderSettings = @{(NSString *)kCVPixelBufferPixelFormatTypeKey: @(kCVPixelFormatType_32BGRA)};
+        AVAssetReaderTrackOutput *inputAssetVideoReaderOutput = [AVAssetReaderTrackOutput assetReaderTrackOutputWithTrack:inputAssetVideo
+                                                                                                           outputSettings:inputAssetVideoReaderSettings];
+        [inputAssetVideoReader addOutput:inputAssetVideoReaderOutput];
+        [inputAssetVideoReader startReading];
 
 
         // Think this is right for "duration" of 1 frame
@@ -74,6 +76,7 @@ int main(int argc, const char * argv[])
         CMTime timeRangeFrameSource = CMTimeMake(1, inputFramePerSecond);
 
         CGImageRef firstImg = NULL, inbetweenImg = NULL, lastImg = NULL;
+        CMSampleBufferRef firstSample = NULL, inbetweenSample = NULL, lastSample = NULL;
 
         for (NSUInteger frame = 2; frame < outputFrameCount; frame += 2)
         {
@@ -108,27 +111,30 @@ int main(int argc, const char * argv[])
             {
                 // Only insert the first frame for the actual first frame
                 // Otherwise we'd be duplicating this effort
-                BOOL okFirst = [outputTrack insertTimeRange:firstFrameTimeRangeSource ofTrack:inputAssetVideo atTime:firstFrameTime error:&err];
-                if (!okFirst)
-                {
-                    NSLog(@"okFirst is false %@", err);
-                }
 
-                firstImg = [outputGenerator copyCGImageAtTime:firstFrameTime actualTime:nil error:&err];
+                firstSample = [inputAssetVideoReaderOutput copyNextSampleBuffer];
+                firstImg = CreateImageFromSampleBuffer(firstSample);
+                CFRelease(firstSample), firstSample = NULL;
+
+
+                // TODO: WRITE FIRSTFRAME TO OUTPUT
             }
 
-            BOOL okLast = [outputTrack insertTimeRange:lastFrameTimeRangeSource ofTrack:inputAssetVideo atTime:lastFrameTime error:&err];
-            if (!okLast)
-            {
-                NSLog(@"okLast is false %@", err);
-            }
+            lastSample = [inputAssetVideoReaderOutput copyNextSampleBuffer];
+            lastImg = CreateImageFromSampleBuffer(lastSample);
+            CFRelease(lastSample), lastSample = NULL;
 
-            lastImg = [outputGenerator copyCGImageAtTime:lastFrameTime actualTime:nil error:&err];
             inbetweenImg = CreateInbetweenFrame(firstImg, lastImg);
 
+            // TODO: WRITE INBETWEEN TO OUTPUT
+            // TODO: WRITE LASTFRAME TO OUTPUT
 
+//            NSLog(@"%@ %@ %@", firstImg, inbetweenImg, lastImg);
+
+            // Release objects
             CGImageRelease(firstImg), firstImg = NULL;
             CGImageRelease(inbetweenImg), inbetweenImg = NULL;
+            // Set first to last for next iteration
             firstImg = lastImg, lastImg = NULL;
         }
 
@@ -141,6 +147,7 @@ int main(int argc, const char * argv[])
 
         // Might need this for adding audio?
         // http://stackoverflow.com/questions/5640657/avfoundation-assetwriter-generate-movie-with-images-and-audio
+        // http://stackoverflow.com/questions/6061092/make-movie-file-with-picture-array-and-song-file-using-avasset
 //        NSLog(@"Presets: %@", [AVAssetExportSession exportPresetsCompatibleWithAsset:outputComp]);
 //        AVAssetExportSession *export = [AVAssetExportSession exportSessionWithAsset:outputComp presetName:AVAssetExportPresetPassthrough];
 //        export.outputFileType = AVFileTypeMPEG4;
