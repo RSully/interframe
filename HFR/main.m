@@ -10,6 +10,12 @@
 #import <AVFoundation/AVFoundation.h>
 #import <AppKit/AppKit.h>
 
+CGImageRef CreateInbetweenFrame(CGImageRef frame1, CGImageRef frame2)
+{
+    // TODO: implement this better ;)
+    return CGImageCreateCopy(frame2);
+}
+
 int main(int argc, const char * argv[])
 {
 
@@ -39,9 +45,14 @@ int main(int argc, const char * argv[])
         AVAssetImageGenerator *outputGenerator = [[AVAssetImageGenerator alloc] initWithAsset:outputComp];
 
 
+        // Think this is right for "duration" of 1 frame
+        CMTime timeRangeFrame = CMTimeMake(1, outputFramePerSecond);
+        CMTime timeRangeFrameSource = CMTimeMake(1, inputFramePerSecond);
+
+
         for (NSUInteger frame = 2; frame < outputFrameCount; frame += 2)
         {
-            if (frame > 500) break;
+            if (frame > 400) break;
 
             // math         explain                 output      input
             // -----------------------------------------------------------
@@ -64,24 +75,34 @@ int main(int argc, const char * argv[])
             CMTime firstFrameTimeSource = CMTimeMake(firstFrameSource, inputFramePerSecond);
             CMTime lastFrameTimeSource = CMTimeMake(lastFrameSource, inputFramePerSecond);
 
-            // Think this is right for "duration" of 1 frame
-            CMTime timeRangeFrame = CMTimeMake(1, outputFramePerSecond);
-            CMTime timeRangeFrameSource = CMTimeMake(1, inputFramePerSecond);
-
             CMTimeRange inbetweenFrameTimeRange = CMTimeRangeMake(inbetweenFrameTime, timeRangeFrame);
             CMTimeRange firstFrameTimeRangeSource = CMTimeRangeMake(firstFrameTimeSource, timeRangeFrameSource);
             CMTimeRange lastFrameTimeRangeSource = CMTimeRangeMake(lastFrameTimeSource, timeRangeFrameSource);
 
-            BOOL okFirst = [outputTrack insertTimeRange:firstFrameTimeRangeSource ofTrack:inputAssetVideo atTime:firstFrameTime error:&err];
+            if (firstFrame < 1)
+            {
+                // Only insert the first frame for the actual first frame
+                // Otherwise we'd be duplicating this effort
+                BOOL okFirst = [outputTrack insertTimeRange:firstFrameTimeRangeSource ofTrack:inputAssetVideo atTime:firstFrameTime error:&err];
+                if (!okFirst)
+                {
+                    NSLog(@"okFirst is false %@", err);
+                }
+            }
             BOOL okLast = [outputTrack insertTimeRange:lastFrameTimeRangeSource ofTrack:inputAssetVideo atTime:lastFrameTime error:&err];
+            if (!okLast)
+            {
+                NSLog(@"okLast is false %@", err);
+            }
 
+            // TODO: we can save effort here by not re-fetching the firstImg and reusing lastImg from previous iteration
             CGImageRef firstImg = [outputGenerator copyCGImageAtTime:firstFrameTime actualTime:nil error:&err];
             CGImageRef lastImg = [outputGenerator copyCGImageAtTime:lastFrameTime actualTime:nil error:&err];
-            // This is where we would call our generator:
-            CGImageRef inbetweenImg = CGImageCreateCopy(lastImg);
+            CGImageRef inbetweenImg = CreateInbetweenFrame(firstImg, lastImg);
 
         }
 
+        NSLog(@"Beginning export");
 
 //        NSLog(@"Presets: %@", [AVAssetExportSession exportPresetsCompatibleWithAsset:outputComp]);
 //        AVAssetExportSession *export = [AVAssetExportSession exportSessionWithAsset:outputComp presetName:AVAssetExportPresetPassthrough];
@@ -90,8 +111,8 @@ int main(int argc, const char * argv[])
 //        [export exportAsynchronouslyWithCompletionHandler:^{
 //            NSLog(@".. done?");
 //        }];
-
-        [[NSRunLoop currentRunLoop] run];
+//
+//        [[NSRunLoop currentRunLoop] run];
 
     }
     return 0;
