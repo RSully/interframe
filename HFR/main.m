@@ -176,11 +176,13 @@ int main(int argc, const char * argv[])
             CFRelease(lastSample), lastSample = NULL;
 
             inbetweenImg = CreateInbetweenFrame(firstImg, lastImg);
+            CVImageBufferRef inbetweenBuffer = ImageBufferForImage(inbetweenImg);
 
             // TODO: WRITE INBETWEEN TO OUTPUT
+            CFRelease(inbetweenBuffer), inbetweenBuffer = NULL;
             // TODO: WRITE LASTFRAME TO OUTPUT
+            // Not releasing lastImg because we reuse it
 
-//            NSLog(@"%@ %@ %@", firstImg, inbetweenImg, lastImg);
 
             // Release objects
             CGImageRelease(firstImg), firstImg = NULL;
