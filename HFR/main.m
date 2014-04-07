@@ -20,22 +20,27 @@ CGImageRef CreateImageFromSampleBuffer(CMSampleBufferRef sampleBuffer)
     // 32BGRA only?
     // http://stackoverflow.com/questions/3305862/uiimage-created-from-cmsamplebufferref-not-displayed-in-uiimageview
 
+    // Access internal imagebuffer from samplebuffer
     CVImageBufferRef imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer);
-    CVPixelBufferLockBaseAddress(imageBuffer,0);        // Lock the image buffer
+    CVPixelBufferLockBaseAddress(imageBuffer, 0);
 
-    uint8_t *baseAddress = (uint8_t *)CVPixelBufferGetBaseAddressOfPlane(imageBuffer, 0);   // Get information of the image
+    // Get information of the image
+    uint8_t *baseAddress = (uint8_t *)CVPixelBufferGetBaseAddressOfPlane(imageBuffer, 0);
     size_t bytesPerRow = CVPixelBufferGetBytesPerRow(imageBuffer);
     size_t width = CVPixelBufferGetWidth(imageBuffer);
     size_t height = CVPixelBufferGetHeight(imageBuffer);
+
+    // Using device RGB - is this best?
     CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
 
+    // Create a context from samplebuffer to get CGImage
     CGContextRef newContext = CGBitmapContextCreate(baseAddress, width, height, 8, bytesPerRow, colorSpace, kCGBitmapByteOrder32Little | kCGImageAlphaPremultipliedFirst);
     CGImageRef newImage = CGBitmapContextCreateImage(newContext);
-    CGContextRelease(newContext);
 
+    // Cleanup
+    CGContextRelease(newContext);
     CGColorSpaceRelease(colorSpace);
-    CVPixelBufferUnlockBaseAddress(imageBuffer,0);
-    /* CVBufferRelease(imageBuffer); */  // do not call this!
+    CVPixelBufferUnlockBaseAddress(imageBuffer, 0);
 
     return newImage;
 }
