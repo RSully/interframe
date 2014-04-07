@@ -139,6 +139,8 @@ int main(int argc, const char * argv[])
 
         NSLog(@"Beginning export");
 
+        // Might need this for adding audio?
+        // http://stackoverflow.com/questions/5640657/avfoundation-assetwriter-generate-movie-with-images-and-audio
 //        NSLog(@"Presets: %@", [AVAssetExportSession exportPresetsCompatibleWithAsset:outputComp]);
 //        AVAssetExportSession *export = [AVAssetExportSession exportSessionWithAsset:outputComp presetName:AVAssetExportPresetPassthrough];
 //        export.outputFileType = AVFileTypeMPEG4;
