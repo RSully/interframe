@@ -109,7 +109,7 @@
     for (NSUInteger frame = 2; frame < self.outputFrameCount; frame += 2)
     {
         // TODO: remove, debug only
-        if (frame > 400) break;
+        if (frame > 10) break;
 
         // Frame numbers for output
         framePrior = frame - 2;
@@ -121,9 +121,9 @@
         frameNextInput = frameNext / 2;
 
         // Frame times
-        timePrior = CMTimeMake(framePrior, self.outputFPS);
-        timeInbetween = CMTimeMake(frameInbetween, self.outputFPS);
-        timeNext = CMTimeMake(frameNext, self.outputFPS);
+        timePrior = CMTimeMakeWithSeconds(framePrior / self.outputFPS, NSEC_PER_SEC);
+        timeInbetween = CMTimeMakeWithSeconds(frameInbetween / self.outputFPS, NSEC_PER_SEC);
+        timeNext = CMTimeMakeWithSeconds(frameNext / self.outputFPS, NSEC_PER_SEC);
 
 
         // Handle first frame special
@@ -131,12 +131,12 @@
         {
             sampleBufferPrior = [self.inputAssetVideoReaderOutput copyNextSampleBuffer];
             pixelBufferPrior = CMSampleBufferGetImageBuffer(sampleBufferPrior);
-
             imagePrior = [self createCGImageFromPixelBuffer:pixelBufferPrior];
 
             // We don't want to duplicate writes, so do it here
-            CMTimeShow(timePrior);
             [self lazilyAppendPixelBuffer:pixelBufferPrior withPresentationTime:timePrior];
+
+            CFRelease(sampleBufferPrior), sampleBufferPrior = NULL;
         }
 
         sampleBufferNext = [self.inputAssetVideoReaderOutput copyNextSampleBuffer];
@@ -145,29 +145,36 @@
 
 
         // TODO: delegate this logic to interpolator
+        assert(imagePrior);assert(imageNext);
         imageInbetween = CGImageCreateCopy(imagePrior);
         pixelBufferInbetween = [self createPixelBufferFromCGImage:imageInbetween];
 
 
-        CMTimeShow(timeInbetween);
-//        [self lazilyAppendPixelBuffer:pixelBufferInbetween withPresentationTime:timeInbetween];
-        CMTimeShow(timeNext);
+        if (pixelBufferInbetween)
+        {
+            [self lazilyAppendPixelBuffer:pixelBufferInbetween withPresentationTime:timeInbetween];
+        }
         [self lazilyAppendPixelBuffer:pixelBufferNext withPresentationTime:timeNext];
 
 
-        // We need to hang onto pixelBufferNext, imageNext
-        // by extension we need to hang onto sampleBufferNext to release it
-        // These all need to go to "prior" vars
-        pixelBufferPrior = pixelBufferNext;
-        CGImageRelease(imagePrior), imagePrior = imageNext;
-        CFRelease(sampleBufferPrior), sampleBufferPrior = sampleBufferNext;
-
-        // Cleanup inbetween
-        CGImageRelease(imageInbetween), imageInbetween = NULL;
+        // Cleanup
         CVPixelBufferRelease(pixelBufferInbetween), pixelBufferInbetween = NULL;
+        CGImageRelease(imageInbetween), imageInbetween = NULL;
+        CGImageRelease(imagePrior), imagePrior = NULL;
+        CFRelease(sampleBufferNext), sampleBufferNext = NULL;
+        // We need to keep this around to generate the next inbetween
+        imagePrior = imageNext;
 
     }
 
+    if (imageNext) {
+        CGImageRelease(imageNext), imageNext = NULL;
+    }
+    if (sampleBufferNext) {
+        CFRelease(sampleBufferNext), sampleBufferNext = NULL;
+    }
+
+    NSLog(@"Going to finish writing...");
     [self.outputWriter finishWritingWithCompletionHandler:^{
         NSLog(@"Finished writing");
         // TODO: ?
@@ -177,9 +184,11 @@
 
 -(void)lazilyAppendPixelBuffer:(CVPixelBufferRef)pixelBuffer withPresentationTime:(CMTime)presentationTime {
     while (!self.outputWriterInput.readyForMoreMediaData) {
-        [NSThread sleepForTimeInterval:0.01];
+        [NSThread sleepForTimeInterval:0.005];
     }
+    NSLog(@"{%lld / %d => %f}", presentationTime.value, presentationTime.timescale, CMTimeGetSeconds(presentationTime));
     [self.outputWriterInputAdapter appendPixelBuffer:pixelBuffer withPresentationTime:presentationTime];
+    NSLog(@"FINISHED APPEND");
 }
 
 /**
@@ -207,8 +216,7 @@
  */
 -(CVPixelBufferRef)createPixelBufferFromCGImage:(CGImageRef)image {
     CVPixelBufferRef pixelBuffer = NULL;
-    NSLog(@"%d", self.outputWriterInput.readyForMoreMediaData);
-    CVReturn status = CVPixelBufferPoolCreatePixelBuffer(NULL, self.outputWriterInputAdapter.pixelBufferPool, &pixelBuffer);
+    CVReturn status = CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, self.outputWriterInputAdapter.pixelBufferPool, &pixelBuffer);
     if (status != 0) return NULL;
 
     CVPixelBufferLockBaseAddress(pixelBuffer, 0);
@@ -216,7 +224,7 @@
     CGContextRef context = [self createContextFromPixelBuffer:pixelBuffer];
 
     // Draw the image onto pixelBuffer
-    CGContextDrawImage(context, CGRectMake(0, 0, CVPixelBufferGetWidth(pixelBuffer), CVPixelBufferGetWidth(pixelBuffer)), image);
+    CGContextDrawImage(context, CGRectMake(0, 0, CGImageGetWidth(image), CGImageGetHeight(image)), image);
 
     CGContextRelease(context);
     CVPixelBufferUnlockBaseAddress(pixelBuffer, 0);
@@ -236,7 +244,9 @@
 
     CGContextRef context = CGBitmapContextCreate(baseAddress, width, height, 8, bytesPerRow, colorSpace, kRSFIBitmapInfo);
 
+    // Cleanup
     CGColorSpaceRelease(colorSpace);
+
     return context;
 }
 
