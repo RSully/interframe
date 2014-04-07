@@ -12,16 +12,68 @@
 
 #define kRSUBitmapInfo (kCGBitmapByteOrder32Little | kCGImageAlphaPremultipliedFirst)
 
+
+@interface RSFrameInterpolator ()
+
+@property (strong) NSDictionary *defaultPixelSettings;
+
+// Input assets
+@property (strong) AVAsset *inputAsset;
+@property (strong) AVAssetTrack *inputAssetVideoTrack;
+// Input readers
+@property (strong) AVAssetReader *inputAssetVideoReader;
+@property (strong) AVAssetReaderTrackOutput *inputAssetVideoReaderOutput;
+// Input metadata
+@property float inputFPS;
+@property NSUInteger inputFrameCount;
+
+// Output writer
+@property (strong) AVAssetWriterInputPixelBufferAdaptor *outputWriterInputAdapter;
+// Output metadata
+@property float outputFPS;
+@property NSUInteger outputFrameCount;
+
+@end
+
+
 @implementation RSFrameInterpolator
 
 -(id)initWithAsset:(AVAsset *)asset {
-    if ((self = [self init])) {
+    if ((self = [self init]))
+    {
+        NSError *error = nil;
+        self.defaultPixelSettings = @{(NSString *)kCVPixelBufferPixelFormatTypeKey: @(kCVPixelFormatType_32BGRA)};
 
+        self.inputAsset = asset;
+
+        // Setup input metadata
+        self.inputAssetVideoTrack = [self.inputAsset tracksWithMediaType:AVMediaTypeVideo][0];
+        self.inputFPS = self.inputAssetVideoTrack.nominalFrameRate;
+        self.inputFrameCount = round(self.inputFPS * CMTimeGetSeconds(self.inputAsset.duration));
+
+        // Calculate expected output metadata
+        self.outputFPS = self.inputFPS * 2.0;
+        self.outputFrameCount = (self.inputFrameCount * 2.0) - 1;
+
+        // Setup input reader
+        self.inputAssetVideoReader = [[AVAssetReader alloc] initWithAsset:self.inputAsset error:&error];
+        if (error)
+        {
+            @throw [NSException exceptionWithName:@"RSFIException" reason:@"Failed to instantiate inputAssetVideoReader" userInfo:@{@"error": error}];
+        }
+        self.inputAssetVideoReaderOutput = [AVAssetReaderTrackOutput assetReaderTrackOutputWithTrack:self.inputAssetVideoTrack
+                                                                                      outputSettings:self.defaultPixelSettings];
+        [self.inputAssetVideoReader addOutput:self.inputAssetVideoReaderOutput];
     }
     return self;
 }
+
+-(void)interpolate {
+    // LOGICCCC
+}
+
 /**
- * This gets us a CGImage from a CVPixelBuffer
+ * Create a CGImage from a CVPixelBuffer
  * This may only work on 32BGRA sources
  *
  * Some logic from: http://stackoverflow.com/questions/3305862/uiimage-created-from-cmsamplebufferref-not-displayed-in-uiimageview
@@ -50,6 +102,9 @@
 
     return image;
 }
+/**
+ * Create a CVPixelBuffer from a CGImage
+ */
 -(CVPixelBufferRef)createPixelBufferFromCGImage:(CGImageRef)image {
     return NULL;
 }
