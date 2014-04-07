@@ -7,7 +7,13 @@
 //
 
 #import <Foundation/Foundation.h>
+#import <AVFoundation/AVFoundation.h>
+
 
 @interface RSFrameInterpolator : NSObject
+
+-(id)initWithAsset:(AVAsset *)asset output:(NSURL *)output;
+
+-(void)interpolate;
 
 @end

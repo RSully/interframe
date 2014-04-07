@@ -7,7 +7,6 @@
 //
 
 #import "RSFrameInterpolator.h"
-#import <AVFoundation/AVFoundation.h>
 #import <AppKit/AppKit.h>
 
 #define kRSFIBitmapInfo (kCGBitmapByteOrder32Little | kCGImageAlphaPremultipliedFirst)
@@ -71,7 +70,7 @@
         // Setup output writer
         NSString *fileType = CFBridgingRelease(UTTypeCreatePreferredIdentifierForTag(kUTTagClassFilenameExtension, (__bridge CFStringRef)([output pathExtension]), NULL));
         self.outputWriter = [[AVAssetWriter alloc] initWithURL:output fileType:fileType error:&error];
-        NSDictionary *outputSettings = @{AVVideoCodecKey: AVVideoCodecH264};
+        NSDictionary *outputSettings = @{AVVideoCodecKey: AVVideoCodecH264, AVVideoHeightKey: @(self.inputAssetVideoTrack.naturalSize.height), AVVideoWidthKey: @(self.inputAssetVideoTrack.naturalSize.width)};
         self.outputWriterInput = [[AVAssetWriterInput alloc] initWithMediaType:AVMediaTypeVideo outputSettings:outputSettings];
         self.outputWriterInputAdapter = [[AVAssetWriterInputPixelBufferAdaptor alloc] initWithAssetWriterInput:self.outputWriterInput
                                                                                    sourcePixelBufferAttributes:self.defaultPixelSettings];
@@ -121,6 +120,11 @@
         framePriorInput = framePrior / 2;
         frameNextInput = frameNext / 2;
 
+        // Frame times
+        timePrior = CMTimeMake(framePrior, self.outputFPS);
+        timeInbetween = CMTimeMake(frameInbetween, self.outputFPS);
+        timeNext = CMTimeMake(frameNext, self.outputFPS);
+
 
         // Handle first frame special
         if (framePrior == 0)
@@ -141,6 +145,7 @@
 
         // TODO: delegate this logic to interpolator
         imageInbetween = CGImageCreateCopy(imagePrior);
+        pixelBufferInbetween = [self createPixelBufferFromCGImage:imageInbetween];
 
 
         [self.outputWriterInputAdapter appendPixelBuffer:pixelBufferInbetween withPresentationTime:timeInbetween];
@@ -153,8 +158,17 @@
         pixelBufferPrior = pixelBufferNext;
         CGImageRelease(imagePrior), imagePrior = imageNext;
         CFRelease(sampleBufferPrior), sampleBufferPrior = sampleBufferNext;
+        
+        // Cleanup inbetween
+        CGImageRelease(imageInbetween), imageInbetween = NULL;
+        CFRelease(pixelBufferInbetween), pixelBufferInbetween = NULL;
 
     }
+
+    [self.outputWriter finishWritingWithCompletionHandler:^{
+        NSLog(@"Finished writing");
+        // TODO: ?
+    }];
 
 }
 
@@ -167,6 +181,39 @@
 -(CGImageRef)createCGImageFromPixelBuffer:(CVPixelBufferRef)pixelBuffer {
     CVPixelBufferLockBaseAddress(pixelBuffer, 0);
 
+    CGContextRef context = [self createContextFromPixelBuffer:pixelBuffer];
+
+    // Fetch the image
+    CGImageRef image = CGBitmapContextCreateImage(context);
+
+    // Cleanup
+    CGContextRelease(context);
+    CVPixelBufferUnlockBaseAddress(pixelBuffer, 0);
+
+    return image;
+}
+/**
+ * Create a CVPixelBuffer from a CGImage
+ */
+-(CVPixelBufferRef)createPixelBufferFromCGImage:(CGImageRef)image {
+    CVPixelBufferRef pixelBuffer = NULL;
+    CVReturn status = CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, self.outputWriterInputAdapter.pixelBufferPool, &pixelBuffer);
+    if (status != 0) return NULL;
+
+    CVPixelBufferLockBaseAddress(pixelBuffer, 0);
+
+    CGContextRef context = [self createContextFromPixelBuffer:pixelBuffer];
+
+    // Draw the image onto pixelBuffer
+    CGContextDrawImage(context, CGRectMake(0, 0, CVPixelBufferGetWidth(pixelBuffer), CVPixelBufferGetWidth(pixelBuffer)), image);
+
+    CGContextRelease(context);
+    CVPixelBufferUnlockBaseAddress(pixelBuffer, 0);
+
+    return pixelBuffer;
+}
+
+-(CGContextRef)createContextFromPixelBuffer:(CVPixelBufferRef)pixelBuffer {
     // Get info about image
     void *baseAddress = CVPixelBufferGetBaseAddress(pixelBuffer);
     size_t width = CVPixelBufferGetWidth(pixelBuffer);
@@ -176,23 +223,7 @@
     // Using device RGB - is this best?
     CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
 
-    // Create a context from pixelBuffer to get a CGImage
-    CGContextRef context = CGBitmapContextCreate(baseAddress, width, height, 8, bytesPerRow, colorSpace, kRSFIBitmapInfo);
-    // Fetch the image
-    CGImageRef image = CGBitmapContextCreateImage(context);
-
-    // Cleanup
-    CGContextRelease(context);
-    CGColorSpaceRelease(colorSpace);
-    CVPixelBufferUnlockBaseAddress(pixelBuffer, 0);
-
-    return image;
-}
-/**
- * Create a CVPixelBuffer from a CGImage
- */
--(CVPixelBufferRef)createPixelBufferFromCGImage:(CGImageRef)image {
-    return NULL;
+    return CGBitmapContextCreate(baseAddress, width, height, 8, bytesPerRow, colorSpace, kRSFIBitmapInfo);
 }
 
 @end

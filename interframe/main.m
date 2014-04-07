@@ -25,6 +25,13 @@ int main(int argc, const char * argv[])
 
         AVURLAsset *input = [AVURLAsset assetWithURL:inputUrl];
 
+
+        RSFrameInterpolator *fi = [[RSFrameInterpolator alloc] initWithAsset:input
+                                                                      output:outputUrl];
+        [fi interpolate];
+
+        [[NSRunLoop currentRunLoop] run];
+
     }
     return 0;
 }
