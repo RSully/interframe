@@ -27,8 +27,8 @@
 
 // Output writer
 @property (strong) AVAssetWriter *outputWriter;
-@property (strong) AVAssetWriterInput *outputWriterInput;
-@property (strong) AVAssetWriterInputPixelBufferAdaptor *outputWriterInputAdapter;
+@property (strong) AVAssetWriterInput *outputWriterVideoInput;
+@property (strong) AVAssetWriterInputPixelBufferAdaptor *outputWriterVideoInputAdapter;
 // Output metadata
 @property float outputFPS;
 @property NSUInteger outputFrameCount;
@@ -90,10 +90,10 @@
         self.defaultPixelSettings[(NSString *)kCVPixelBufferCGBitmapContextCompatibilityKey] = @(YES);
         self.defaultPixelSettings[(NSString *)kCVPixelBufferCGImageCompatibilityKey] = @(YES);
 
-        self.outputWriterInput = [[AVAssetWriterInput alloc] initWithMediaType:AVMediaTypeVideo outputSettings:outputSettings];
-        self.outputWriterInputAdapter = [[AVAssetWriterInputPixelBufferAdaptor alloc] initWithAssetWriterInput:self.outputWriterInput
+        self.outputWriterVideoInput = [[AVAssetWriterInput alloc] initWithMediaType:AVMediaTypeVideo outputSettings:outputSettings];
+        self.outputWriterVideoInputAdapter = [[AVAssetWriterInputPixelBufferAdaptor alloc] initWithAssetWriterInput:self.outputWriterVideoInput
                                                                                    sourcePixelBufferAttributes:self.defaultPixelSettings];
-        [self.outputWriter addInput:self.outputWriterInput];
+        [self.outputWriter addInput:self.outputWriterVideoInput];
     }
     return self;
 }
@@ -137,7 +137,7 @@
     for (NSUInteger frame = 2; frame <= self.outputFrameCount; frame += 2)
     {
         // TODO: remove, debug only
-        if (frame > 80) break;
+//        if (frame > 200) break;
 
         // Frame numbers for output
         framePrior = frame - 2;
@@ -212,7 +212,7 @@
     }
 
     NSLog(@"Going to finish writing...");
-    [self.outputWriterInput markAsFinished];
+    [self.outputWriterVideoInput markAsFinished];
     [self.outputWriter finishWritingWithCompletionHandler:^{
         NSLog(@"Finished writing");
         [self.delegate interpolatorFinished:self];
@@ -222,11 +222,11 @@
 }
 
 -(void)lazilyAppendPixelBuffer:(CVPixelBufferRef)pixelBuffer withPresentationTime:(CMTime)presentationTime {
-    while (!self.outputWriterInput.readyForMoreMediaData) {
+    while (!self.outputWriterVideoInput.readyForMoreMediaData) {
         [NSThread sleepForTimeInterval:0.005];
     }
 
-    BOOL result = [self.outputWriterInputAdapter appendPixelBuffer:pixelBuffer withPresentationTime:presentationTime];
+    BOOL result = [self.outputWriterVideoInputAdapter appendPixelBuffer:pixelBuffer withPresentationTime:presentationTime];
     if (!result)
     {
         NSLog(@"failed to append pixel buffer %@", self.outputWriter.error);
@@ -257,11 +257,11 @@
     free(sampleTiming);
 }
 -(void)lazilyAppendSampleBuffer:(CMSampleBufferRef)sampleBuffer {
-    while (!self.outputWriterInput.readyForMoreMediaData) {
+    while (!self.outputWriterVideoInput.readyForMoreMediaData) {
         [NSThread sleepForTimeInterval:0.01];
     }
 
-    BOOL result = [self.outputWriterInput appendSampleBuffer:sampleBuffer];
+    BOOL result = [self.outputWriterVideoInput appendSampleBuffer:sampleBuffer];
     if (!result)
     {
         NSLog(@"failed to append sample buffer %@", self.outputWriter.error);
@@ -330,7 +330,7 @@
 }
 -(CVPixelBufferRef)newPixelBuffer {
     CVPixelBufferRef pixelBuffer = NULL;
-    CVReturn status = CVPixelBufferPoolCreatePixelBuffer(NULL, self.outputWriterInputAdapter.pixelBufferPool, &pixelBuffer);
+    CVReturn status = CVPixelBufferPoolCreatePixelBuffer(NULL, self.outputWriterVideoInputAdapter.pixelBufferPool, &pixelBuffer);
 
     if (status != kCVReturnSuccess)
     {
