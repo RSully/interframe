@@ -32,16 +32,16 @@
     [self.interpolator interpolate];
 }
 
--(CGImageRef)createInterpolatedImageForInterpolator:(RSFrameInterpolator *)interpolator
-                                          withState:(RSFrameInterpolationState *)state {
+-(CGImageRef)newInterpolatedImageForInterpolator:(RSFrameInterpolator *)interpolator
+                                       withState:(RSFrameInterpolationState *)state {
     NSLog(@"-createInterpolated %@ %@ %lu", state.priorImage, state.nextImage, (unsigned long)state.frame);
 //    if (!state.priorImage || !state.nextImage) return NULL;
     [self.repPrior setContext:[CGContextCreator newARGBBitmapContextWithImage:state.priorImage]];
     [self.repNext setContext:[CGContextCreator newARGBBitmapContextWithImage:state.nextImage]];
 
-    for (NSUInteger x = 0; x < self.repPrior.bitmapSize.x; x++)
+    for (long x = 0; x < self.repPrior.bitmapSize.x; x++)
     {
-        for (NSUInteger y = 0; y < self.repPrior.bitmapSize.y; y++)
+        for (long y = 0; y < self.repPrior.bitmapSize.y; y++)
         {
             BMPoint point = BMPointMake(x, y);
 
@@ -57,7 +57,7 @@
         }
     }
 
-    return self.repPrior.CGImage;
+    return CGImageRetain(self.repPrior.CGImage);
 }
 -(void)interpolatorFinished:(RSFrameInterpolator *)interpolator {
     NSLog(@"Finished!");

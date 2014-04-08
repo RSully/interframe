@@ -100,13 +100,13 @@
 }
 
 
--(CGImageRef)createInterpolatedImageFromPrior:(CGImageRef)imagePrior andNext:(CGImageRef)imageNext
-                                     forFrame:(NSUInteger)frame frameCount:(NSUInteger)frameCount {
+-(CGImageRef)newInterpolatedImageFromPrior:(CGImageRef)imagePrior andNext:(CGImageRef)imageNext
+                                  forFrame:(NSUInteger)frame frameCount:(NSUInteger)frameCount {
     if (!self.delegate) return NULL;
 
     RSFrameInterpolationState *state = [[RSFrameInterpolationState alloc] initWithPriorImage:imagePrior nextImage:imageNext
                                                                                        frame:frame frameCount:frameCount];
-    return [self.delegate createInterpolatedImageForInterpolator:self withState:state];
+    return [self.delegate newInterpolatedImageForInterpolator:self withState:state];
 }
 
 -(void)interpolate {
@@ -138,7 +138,7 @@
     for (NSUInteger frame = 2; frame <= self.outputFrameCount; frame += 2)
     {
         // TODO: remove, debug only
-        if (frame > 40) break;
+        if (frame > 80) break;
 
         // Frame numbers for output
         framePrior = frame - 2;
@@ -158,23 +158,32 @@
 
             sampleBufferPrior = [self.inputAssetVideoReaderOutput copyNextSampleBuffer];
             pixelBufferPrior = CMSampleBufferGetImageBuffer(sampleBufferPrior);
-            imagePrior = [self createCGImageFromPixelBuffer:pixelBufferPrior];
+            imagePrior = [self newCGImageFromPixelBuffer:pixelBufferPrior];
+
 
             // We don't want to duplicate writes, so do it here
-//            NSLog(@"Appending first frame (%f)", CMTimeGetSeconds(timePrior));
+            NSLog(@"Appending first frame (%f)", CMTimeGetSeconds(timePrior));
+
+            // This seems to work to append first frame
+            // The commented code below doesn't.
+            CVPixelBufferRef testPixelBufferPrior = [self newPixelBufferFromCGImage:imagePrior];
+            [self lazilyAppendPixelBuffer:testPixelBufferPrior withPresentationTime:timePrior];
+
 //            [self lazilyAppendPixelBuffer:pixelBufferPrior withPresentationTime:timePrior];
 
+            // Cleanup from here
+            CVPixelBufferRelease(testPixelBufferPrior), testPixelBufferPrior = NULL;
             CFRelease(sampleBufferPrior), sampleBufferPrior = NULL;
         }
 
         sampleBufferNext = [self.inputAssetVideoReaderOutput copyNextSampleBuffer];
         pixelBufferNext = CMSampleBufferGetImageBuffer(sampleBufferNext);
-        imageNext = [self createCGImageFromPixelBuffer:pixelBufferNext];
+        imageNext = [self newCGImageFromPixelBuffer:pixelBufferNext];
 
 
-        imageInbetween = [self createInterpolatedImageFromPrior:imagePrior andNext:imageNext
-                                                       forFrame:frameInbetween frameCount:self.outputFrameCount];
-        pixelBufferInbetween = [self createPixelBufferFromCGImage:imageInbetween];
+        imageInbetween = [self newInterpolatedImageFromPrior:imagePrior andNext:imageNext
+                                                    forFrame:frameInbetween frameCount:self.outputFrameCount];
+        pixelBufferInbetween = [self newPixelBufferFromCGImage:imageInbetween];
         if (!pixelBufferInbetween)
         {
             NSLog(@"Failed to create pixel buffer from imageInbetween");
@@ -245,6 +254,8 @@
     }
 
     [self lazilyAppendSampleBuffer:sampleBuffer];
+
+    free(sampleTiming);
 }
 -(void)lazilyAppendSampleBuffer:(CMSampleBufferRef)sampleBuffer {
     while (!self.outputWriterInput.readyForMoreMediaData) {
@@ -264,10 +275,10 @@
  *
  * Some logic from: http://stackoverflow.com/questions/3305862/uiimage-created-from-cmsamplebufferref-not-displayed-in-uiimageview
  */
--(CGImageRef)createCGImageFromPixelBuffer:(CVPixelBufferRef)pixelBuffer {
+-(CGImageRef)newCGImageFromPixelBuffer:(CVPixelBufferRef)pixelBuffer {
     CVPixelBufferLockBaseAddress(pixelBuffer, 0);
 
-    CGContextRef context = [self createContextFromPixelBuffer:pixelBuffer];
+    CGContextRef context = [self newContextFromPixelBuffer:pixelBuffer];
 
     // Fetch the image
     CGImageRef image = CGBitmapContextCreateImage(context);
@@ -281,8 +292,8 @@
 /**
  * Create a CVPixelBuffer from a CGImage
  */
--(CVPixelBufferRef)createPixelBufferFromCGImage:(CGImageRef)image {
-    CVPixelBufferRef pixelBuffer = [self createPixelBuffer];
+-(CVPixelBufferRef)newPixelBufferFromCGImage:(CGImageRef)image {
+    CVPixelBufferRef pixelBuffer = [self newPixelBuffer];
     if (!pixelBuffer)
     {
         return NULL;
@@ -290,7 +301,7 @@
 
     CVPixelBufferLockBaseAddress(pixelBuffer, 0);
 
-    CGContextRef context = [self createContextFromPixelBuffer:pixelBuffer];
+    CGContextRef context = [self newContextFromPixelBuffer:pixelBuffer];
 
     // Draw the image onto pixelBuffer
     CGContextDrawImage(context, CGRectMake(0, 0, CGImageGetWidth(image), CGImageGetHeight(image)), image);
@@ -301,7 +312,7 @@
     return pixelBuffer;
 }
 
--(CGContextRef)createContextFromPixelBuffer:(CVPixelBufferRef)pixelBuffer {
+-(CGContextRef)newContextFromPixelBuffer:(CVPixelBufferRef)pixelBuffer {
     // Get info about image
     void *baseAddress = CVPixelBufferGetBaseAddress(pixelBuffer);
     size_t width = CVPixelBufferGetWidth(pixelBuffer);
@@ -318,7 +329,7 @@
 
     return context;
 }
--(CVPixelBufferRef)createPixelBuffer {
+-(CVPixelBufferRef)newPixelBuffer {
     CVPixelBufferRef pixelBuffer = NULL;
     CVReturn status = CVPixelBufferPoolCreatePixelBuffer(NULL, self.outputWriterInputAdapter.pixelBufferPool, &pixelBuffer);
 
