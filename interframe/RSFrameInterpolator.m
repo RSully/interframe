@@ -190,6 +190,7 @@
     while (!self.outputWriterInput.readyForMoreMediaData) {
         [NSThread sleepForTimeInterval:0.005];
     }
+
     NSLog(@"{%lld / %d => %f}", presentationTime.value, presentationTime.timescale, CMTimeGetSeconds(presentationTime));
     [self.outputWriterInputAdapter appendPixelBuffer:pixelBuffer withPresentationTime:presentationTime];
     NSLog(@"FINISHED APPEND");
@@ -220,7 +221,8 @@
  */
 -(CVPixelBufferRef)createPixelBufferFromCGImage:(CGImageRef)image {
     CVPixelBufferRef pixelBuffer = NULL;
-    CVReturn status = CVPixelBufferPoolCreatePixelBuffer(NULL, self.outputWriterInputAdapter.pixelBufferPool, &pixelBuffer);
+    CVPixelBufferPoolRef pool = self.outputWriterInputAdapter.pixelBufferPool;
+    CVReturn status = CVPixelBufferPoolCreatePixelBuffer(NULL, pool, &pixelBuffer);
     if (status != 0) return NULL;
 
     CVPixelBufferLockBaseAddress(pixelBuffer, 0);
