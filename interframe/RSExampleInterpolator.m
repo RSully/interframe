@@ -7,6 +7,7 @@
 //
 
 #import "RSExampleInterpolator.h"
+#import <Accelerate/Accelerate.h>
 
 @interface RSExampleInterpolator ()
 
@@ -19,9 +20,6 @@
 -(id)initWithAsset:(AVAsset *)asset output:(NSURL *)output {
     if ((self = [super init]))
     {
-        self.repPrior = [[ANImageBitmapRep alloc] init];
-        self.repNext = [[ANImageBitmapRep alloc] init];
-
         self.interpolator = [[RSFrameInterpolator alloc] initWithAsset:asset output:output];
         self.interpolator.delegate = self;
     }
@@ -37,32 +35,31 @@
     NSLog(@"-createInterpolated %@ %@ %lu", state.priorImage, state.nextImage, (unsigned long)state.frame);
 //    if (!state.priorImage || !state.nextImage) return NULL;
 
-    CGContextRef contextPrior = [CGContextCreator newARGBBitmapContextWithImage:state.priorImage];
-    CGContextRef contextNext = [CGContextCreator newARGBBitmapContextWithImage:state.nextImage];
-    [self.repPrior setContext:contextPrior];
-    [self.repNext setContext:contextNext];
-    CGContextRelease(contextPrior);
-    CGContextRelease(contextNext);
+    ANImageBitmapRep *repPrior = [[ANImageBitmapRep alloc] initWithCGImage:state.priorImage];
+    ANImageBitmapRep *repNext = [[ANImageBitmapRep alloc] initWithCGImage:state.nextImage];
 
-    for (long x = 0; x < self.repPrior.bitmapSize.x; x++)
-    {
-        for (long y = 0; y < self.repPrior.bitmapSize.y; y++)
-        {
-            BMPoint point = BMPointMake(x, y);
+    ANImageBitmapRep *repDest = [[ANImageBitmapRep alloc] initWithSize:repPrior.bitmapSize];
 
-            BMPixel pixelPrior = [self.repPrior getPixelAtPoint:point];
-            BMPixel pixelNext = [self.repNext getPixelAtPoint:point];
+    size_t dataLength = repPrior.bitmapSize.x * repPrior.bitmapSize.y;
 
-            pixelPrior.red = (pixelPrior.red + pixelNext.red) / 2.0;
-            pixelPrior.green = (pixelPrior.green + pixelNext.green) / 2.0;
-            pixelPrior.blue = (pixelPrior.blue + pixelNext.blue) / 2.0;
-            pixelPrior.alpha = (pixelPrior.alpha + pixelNext.alpha) / 2.0;
+    unsigned char *dataPrior = repPrior.bitmapData;
+    unsigned char *dataNext = repNext.bitmapData;
+    float *buffer = malloc(sizeof(float) * (dataLength * 4 * 2));
+    float *result = malloc(sizeof(float) * (dataLength * 4));
 
-            [self.repPrior setPixel:pixelPrior atPoint:point];
-        }
-    }
+    vDSP_vfltu8(dataPrior, 1, buffer, 1, dataLength * 4);
+    vDSP_vfltu8(dataNext, 1, &buffer[dataLength * 4], 1, dataLength * 4);
 
-    return CGImageRetain(self.repPrior.CGImage);
+    float leftMatrix[] = {0.5f, 0.5f};
+    vDSP_mmul(leftMatrix, 1, buffer, 1, result, 1, 1, dataLength * 4, 2);
+    free(buffer);
+
+    vDSP_vfixu8(result, 1, repDest.bitmapData, 1, dataLength * 4);
+    free(result);
+
+    [repDest setNeedsUpdate:YES];
+
+    return CGImageRetain(repDest.CGImage);
 }
 -(void)interpolatorFinished:(RSFrameInterpolator *)interpolator {
     NSLog(@"Finished!");

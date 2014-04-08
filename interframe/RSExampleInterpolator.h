@@ -12,9 +12,6 @@
 
 @interface RSExampleInterpolator : NSObject <RSFrameInterpolatorDelegate>
 
-@property (strong) ANImageBitmapRep *repPrior;
-@property (strong) ANImageBitmapRep *repNext;
-
 -(id)initWithAsset:(AVAsset *)asset output:(NSURL *)output;
 
 -(void)interpolate;
