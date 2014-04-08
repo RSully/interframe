@@ -29,6 +29,7 @@
 @property (strong) AVAssetWriter *outputWriter;
 @property (strong) AVAssetWriterInput *outputWriterVideoInput;
 @property (strong) AVAssetWriterInputPixelBufferAdaptor *outputWriterVideoInputAdapter;
+@property (strong) AVAssetWriterInput *outputWriterAudioInput;
 // Output metadata
 @property float outputFPS;
 @property NSUInteger outputFrameCount;
@@ -136,75 +137,76 @@
     // -----------------------------------------------------------
     for (NSUInteger frame = 2; frame <= self.outputFrameCount; frame += 2)
     {
-        // TODO: remove, debug only
-//        if (frame > 200) break;
-
-        // Frame numbers for output
-        framePrior = frame - 2;
-        frameInbetween = frame - 1;
-        frameNext = frame;
-
-        // Frame times
-        timePrior = CMTimeMakeWithSeconds(framePrior / self.outputFPS, NSEC_PER_SEC);
-        timeInbetween = CMTimeMakeWithSeconds(frameInbetween / self.outputFPS, NSEC_PER_SEC);
-        timeNext = CMTimeMakeWithSeconds(frameNext / self.outputFPS, NSEC_PER_SEC);
-
-
-        // Handle first frame special
-        if (framePrior == 0)
+        @autoreleasepool
         {
-            NSLog(@"---- FIRST FRAME");
 
-            sampleBufferPrior = [self.inputAssetVideoReaderOutput copyNextSampleBuffer];
-            pixelBufferPrior = CMSampleBufferGetImageBuffer(sampleBufferPrior);
-            imagePrior = [self newCGImageFromPixelBuffer:pixelBufferPrior];
+            // Frame numbers for output
+            framePrior = frame - 2;
+            frameInbetween = frame - 1;
+            frameNext = frame;
+
+            // Frame times
+            timePrior = CMTimeMakeWithSeconds(framePrior / self.outputFPS, NSEC_PER_SEC);
+            timeInbetween = CMTimeMakeWithSeconds(frameInbetween / self.outputFPS, NSEC_PER_SEC);
+            timeNext = CMTimeMakeWithSeconds(frameNext / self.outputFPS, NSEC_PER_SEC);
 
 
-            // We don't want to duplicate writes, so do it here
-            NSLog(@"Appending first frame (%f)", CMTimeGetSeconds(timePrior));
+            // Handle first frame special
+            if (framePrior == 0)
+            {
+                NSLog(@"---- FIRST FRAME");
 
-            // This seems to work to append first frame
-            // The commented code below doesn't.
-            CVPixelBufferRef testPixelBufferPrior = [self newPixelBufferFromCGImage:imagePrior];
-            [self lazilyAppendPixelBuffer:testPixelBufferPrior withPresentationTime:timePrior];
+                sampleBufferPrior = [self.inputAssetVideoReaderOutput copyNextSampleBuffer];
+                pixelBufferPrior = CMSampleBufferGetImageBuffer(sampleBufferPrior);
+                imagePrior = [self newCGImageFromPixelBuffer:pixelBufferPrior];
 
-//            [self lazilyAppendPixelBuffer:pixelBufferPrior withPresentationTime:timePrior];
 
-            // Cleanup from here
-            CVPixelBufferRelease(testPixelBufferPrior), testPixelBufferPrior = NULL;
-            CFRelease(sampleBufferPrior), sampleBufferPrior = NULL;
+                // We don't want to duplicate writes, so do it here
+                NSLog(@"Appending first frame (%f)", CMTimeGetSeconds(timePrior));
+
+                // This seems to work to append first frame
+                // The commented code below doesn't.
+                CVPixelBufferRef testPixelBufferPrior = [self newPixelBufferFromCGImage:imagePrior];
+                [self lazilyAppendPixelBuffer:testPixelBufferPrior withPresentationTime:timePrior];
+
+    //            [self lazilyAppendPixelBuffer:pixelBufferPrior withPresentationTime:timePrior];
+
+                // Cleanup from here
+                CVPixelBufferRelease(testPixelBufferPrior), testPixelBufferPrior = NULL;
+                CFRelease(sampleBufferPrior), sampleBufferPrior = NULL;
+            }
+
+            sampleBufferNext = [self.inputAssetVideoReaderOutput copyNextSampleBuffer];
+            pixelBufferNext = CMSampleBufferGetImageBuffer(sampleBufferNext);
+            imageNext = [self newCGImageFromPixelBuffer:pixelBufferNext];
+
+
+            imageInbetween = [self newInterpolatedImageFromPrior:imagePrior andNext:imageNext
+                                                        forFrame:frameInbetween frameCount:self.outputFrameCount];
+            pixelBufferInbetween = [self newPixelBufferFromCGImage:imageInbetween];
+            if (!pixelBufferInbetween)
+            {
+                NSLog(@"Failed to create pixel buffer from imageInbetween");
+            }
+            else
+            {
+                NSLog(@"Appending inbetween frame (%f)", CMTimeGetSeconds(timeInbetween));
+                [self lazilyAppendPixelBuffer:pixelBufferInbetween withPresentationTime:timeInbetween];
+            }
+            NSLog(@"Appending next frame (%f)", CMTimeGetSeconds(timeNext));
+            [self lazilyAppendPixelBuffer:pixelBufferNext withPresentationTime:timeNext];
+
+
+
+            // Cleanup
+            CVPixelBufferRelease(pixelBufferInbetween), pixelBufferInbetween = NULL;
+            CGImageRelease(imageInbetween), imageInbetween = NULL;
+            CGImageRelease(imagePrior), imagePrior = NULL;
+            CFRelease(sampleBufferNext), sampleBufferNext = NULL;
+            // We need to keep this around to generate the next inbetween
+            imagePrior = imageNext;
+
         }
-
-        sampleBufferNext = [self.inputAssetVideoReaderOutput copyNextSampleBuffer];
-        pixelBufferNext = CMSampleBufferGetImageBuffer(sampleBufferNext);
-        imageNext = [self newCGImageFromPixelBuffer:pixelBufferNext];
-
-
-        imageInbetween = [self newInterpolatedImageFromPrior:imagePrior andNext:imageNext
-                                                    forFrame:frameInbetween frameCount:self.outputFrameCount];
-        pixelBufferInbetween = [self newPixelBufferFromCGImage:imageInbetween];
-        if (!pixelBufferInbetween)
-        {
-            NSLog(@"Failed to create pixel buffer from imageInbetween");
-        }
-        else
-        {
-            NSLog(@"Appending inbetween frame (%f)", CMTimeGetSeconds(timeInbetween));
-            [self lazilyAppendPixelBuffer:pixelBufferInbetween withPresentationTime:timeInbetween];
-        }
-        NSLog(@"Appending next frame (%f)", CMTimeGetSeconds(timeNext));
-        [self lazilyAppendPixelBuffer:pixelBufferNext withPresentationTime:timeNext];
-
-
-
-        // Cleanup
-        CVPixelBufferRelease(pixelBufferInbetween), pixelBufferInbetween = NULL;
-        CGImageRelease(imageInbetween), imageInbetween = NULL;
-        CGImageRelease(imagePrior), imagePrior = NULL;
-        CFRelease(sampleBufferNext), sampleBufferNext = NULL;
-        // We need to keep this around to generate the next inbetween
-        imagePrior = imageNext;
-
     }
 
     if (imagePrior) {
