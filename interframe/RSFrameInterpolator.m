@@ -14,7 +14,7 @@
 
 @interface RSFrameInterpolator ()
 
-@property (strong) NSDictionary *defaultPixelSettings;
+@property (strong) NSMutableDictionary *defaultPixelSettings;
 
 // Input assets
 @property (strong) AVAsset *inputAsset;
@@ -43,7 +43,9 @@
     if ((self = [self init]))
     {
         NSError *error = nil;
-        self.defaultPixelSettings = @{(NSString *)kCVPixelBufferPixelFormatTypeKey: @(kCVPixelFormatType_32BGRA)};
+
+        self.defaultPixelSettings = [NSMutableDictionary dictionary];
+        self.defaultPixelSettings[(NSString *)kCVPixelBufferPixelFormatTypeKey] = @(kCVPixelFormatType_32BGRA);
 
         self.inputAsset = asset;
 
@@ -79,6 +81,8 @@
 //                                                 AVVideoAverageBitRateKey: @(5000)
 //                                                 }
                                          };
+        self.defaultPixelSettings[(NSString *)kCVPixelBufferWidthKey] = @(self.inputAssetVideoTrack.naturalSize.width);
+        self.defaultPixelSettings[(NSString *)kCVPixelBufferHeightKey] = @(self.inputAssetVideoTrack.naturalSize.height);
         self.outputWriterInput = [[AVAssetWriterInput alloc] initWithMediaType:AVMediaTypeVideo outputSettings:outputSettings];
         self.outputWriterInputAdapter = [[AVAssetWriterInputPixelBufferAdaptor alloc] initWithAssetWriterInput:self.outputWriterInput
                                                                                    sourcePixelBufferAttributes:self.defaultPixelSettings];
@@ -90,7 +94,7 @@
 
 -(CGImageRef)createInterpolatedImageFromPrior:(CGImageRef)imagePrior andNext:(CGImageRef)imageNext {
     // TODO: delegate this logic to interpolator
-    return CGImageCreateCopy(imagePrior);
+    return CGImageCreateCopy(self.placeholderInterpolatedImage);
 }
 -(void)interpolate {
 

@@ -16,4 +16,6 @@
 
 -(void)interpolate;
 
+@property CGImageRef placeholderInterpolatedImage;
+
 @end
