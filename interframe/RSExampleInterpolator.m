@@ -34,6 +34,8 @@
 
 -(CGImageRef)createInterpolatedImageForInterpolator:(RSFrameInterpolator *)interpolator
                                           withState:(RSFrameInterpolationState *)state {
+    NSLog(@"-createInterpolated %@ %@ %lu", state.priorImage, state.nextImage, (unsigned long)state.frame);
+//    if (!state.priorImage || !state.nextImage) return NULL;
     [self.repPrior setContext:[CGContextCreator newARGBBitmapContextWithImage:state.priorImage]];
     [self.repNext setContext:[CGContextCreator newARGBBitmapContextWithImage:state.nextImage]];
 
