@@ -8,7 +8,15 @@
 
 #import <Foundation/Foundation.h>
 #import "RSFrameInterpolator.h"
+#import "ANImageBitmapRep.h"
 
 @interface RSExampleInterpolator : NSObject <RSFrameInterpolatorDelegate>
+
+@property (strong) ANImageBitmapRep *repPrior;
+@property (strong) ANImageBitmapRep *repNext;
+
+-(id)initWithAsset:(AVAsset *)asset output:(NSURL *)output;
+
+-(void)interpolate;
 
 @end

@@ -8,19 +8,57 @@
 
 #import "RSExampleInterpolator.h"
 
+@interface RSExampleInterpolator ()
+
+@property RSFrameInterpolator *interpolator;
+
+@end
+
 @implementation RSExampleInterpolator
 
--(id)init {
+-(id)initWithAsset:(AVAsset *)asset output:(NSURL *)output {
     if ((self = [super init]))
     {
+        self.repPrior = [[ANImageBitmapRep alloc] init];
+        self.repNext = [[ANImageBitmapRep alloc] init];
 
+        self.interpolator = [[RSFrameInterpolator alloc] initWithAsset:asset output:output];
+        self.interpolator.delegate = self;
     }
     return self;
 }
 
+-(void)interpolate {
+    [self.interpolator interpolate];
+}
+
 -(CGImageRef)createInterpolatedImageForInterpolator:(RSFrameInterpolator *)interpolator
                                           withState:(RSFrameInterpolationState *)state {
-    return CGImageCreateCopy(state.priorImage);
+    [self.repPrior setContext:[CGContextCreator newARGBBitmapContextWithImage:state.priorImage]];
+    [self.repNext setContext:[CGContextCreator newARGBBitmapContextWithImage:state.nextImage]];
+
+    for (NSUInteger x = 0; x < self.repPrior.bitmapSize.x; x++)
+    {
+        for (NSUInteger y = 0; y < self.repPrior.bitmapSize.y; y++)
+        {
+            BMPoint point = BMPointMake(x, y);
+
+            BMPixel pixelPrior = [self.repPrior getPixelAtPoint:point];
+            BMPixel pixelNext = [self.repNext getPixelAtPoint:point];
+
+            pixelPrior.red = (pixelPrior.red + pixelNext.red) / 2.0;
+            pixelPrior.green = (pixelPrior.green + pixelNext.green) / 2.0;
+            pixelPrior.blue = (pixelPrior.blue + pixelNext.blue) / 2.0;
+            pixelPrior.alpha = (pixelPrior.alpha + pixelNext.alpha) / 2.0;
+
+            [self.repPrior setPixel:pixelPrior atPoint:point];
+        }
+    }
+
+    return self.repPrior.CGImage;
+}
+-(void)interpolatorFinished:(RSFrameInterpolator *)interpolator {
+    NSLog(@"Finished!");
 }
 
 @end
