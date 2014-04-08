@@ -103,8 +103,8 @@
 
 -(CGImageRef)createInterpolatedImageFromPrior:(CGImageRef)imagePrior andNext:(CGImageRef)imageNext {
     // TODO: delegate this logic to interpolator
-    return CGImageCreateCopy(imagePrior);
-//    return CGImageCreateCopy(self.placeholderInterpolatedImage);
+//    return CGImageCreateCopy(imagePrior);
+    return CGImageCreateCopy(self.placeholderInterpolatedImage);
 }
 -(void)interpolate {
 
@@ -132,7 +132,7 @@
     // frame - 1 = inbetween frame      // 1 3 5    //
     // frame - 0 = last source frame    // 2 4 6    // 1 2 3
     // -----------------------------------------------------------
-    for (NSUInteger frame = 2; frame < self.outputFrameCount; frame += 2)
+    for (NSUInteger frame = 3; frame <= self.outputFrameCount; frame += 2)
     {
         // TODO: remove, debug only
         if (frame > 100) break;
@@ -156,9 +156,7 @@
             imagePrior = [self createCGImageFromPixelBuffer:pixelBufferPrior];
 
             // We don't want to duplicate writes, so do it here
-//            [self lazilyAppendPixelBuffer:pixelBufferPrior withPresentationTime:timePrior];
-            CMSampleBufferSetOutputPresentationTimeStamp(sampleBufferPrior, timePrior);
-            [self lazilyAppendSampleBuffer:sampleBufferPrior];
+            [self lazilyAppendPixelBuffer:pixelBufferPrior withPresentationTime:timePrior];
 
             CFRelease(sampleBufferPrior), sampleBufferPrior = NULL;
         }
@@ -176,10 +174,8 @@
         }
 
 
-        [self lazilyAppendPixelBuffer:pixelBufferInbetween withPresentationTime:timeInbetween];
-//        [self lazilyAppendPixelBuffer:pixelBufferNext withPresentationTime:timeNext];
-        CMSampleBufferSetOutputPresentationTimeStamp(sampleBufferNext, timeNext);
-        [self lazilyAppendSampleBuffer:sampleBufferNext];
+        [self lazilyAppendPixelBufferAsSampleBuffer:pixelBufferInbetween withPresentationTime:timeInbetween];
+        [self lazilyAppendPixelBuffer:pixelBufferNext withPresentationTime:timeNext];
 
 
         // Cleanup
@@ -216,11 +212,33 @@
     {
         NSLog(@"failed to append pixel buffer %@", self.outputWriter.error);
     }
-    NSLog(@"FINISHED APPEND");
+    NSLog(@"finished -lazilyAppendPixelBuffer");
+}
+-(void)lazilyAppendPixelBufferAsSampleBuffer:(CVPixelBufferRef)pixelBuffer withPresentationTime:(CMTime)presentationTime {
+    CMSampleBufferRef sampleBuffer = NULL;
+    CMVideoFormatDescriptionRef formatDescription = NULL;
+
+    CMSampleTimingInfo *sampleTiming = malloc(sizeof(CMSampleTimingInfo));
+    sampleTiming->decodeTimeStamp = kCMTimeInvalid;
+    sampleTiming->duration = CMTimeMakeWithSeconds(1 / self.outputFPS, NSEC_PER_SEC);
+    sampleTiming->presentationTimeStamp = presentationTime;
+
+    OSStatus fStatus = CMVideoFormatDescriptionCreateForImageBuffer(NULL, pixelBuffer, &formatDescription);
+    if (fStatus != 0)
+    {
+        NSLog(@"fStatus %d", fStatus);
+    }
+    OSStatus sStatus = CMSampleBufferCreateForImageBuffer(NULL, pixelBuffer, YES, NULL, NULL, formatDescription, sampleTiming, &sampleBuffer);
+    if (sStatus != 0)
+    {
+        NSLog(@"sStatus %d", sStatus);
+    }
+
+    [self lazilyAppendSampleBuffer:sampleBuffer];
 }
 -(void)lazilyAppendSampleBuffer:(CMSampleBufferRef)sampleBuffer {
     while (!self.outputWriterInput.readyForMoreMediaData) {
-        [NSThread sleepForTimeInterval:0.005];
+        [NSThread sleepForTimeInterval:0.01];
     }
 
     BOOL result = [self.outputWriterInput appendSampleBuffer:sampleBuffer];
@@ -228,6 +246,7 @@
     {
         NSLog(@"failed to append sample buffer %@", self.outputWriter.error);
     }
+    NSLog(@"finished -lazilyAppendSampleBuffer");
 }
 
 /**
@@ -294,9 +313,10 @@
     NSLog(@"-createPixelBuffer");
     CVPixelBufferRef pixelBuffer = NULL;
 
-//    CVPixelBufferPoolRef pool = self.outputWriterInputAdapter.pixelBufferPool;
-//    CVReturn status = CVPixelBufferPoolCreatePixelBuffer(NULL, pool, &pixelBuffer);
-    CVReturn status = CVPixelBufferCreate(NULL, [(NSNumber *)self.outputWriterInput.outputSettings[AVVideoWidthKey] unsignedIntegerValue], [(NSNumber *)self.outputWriterInput.outputSettings[AVVideoHeightKey] unsignedIntegerValue], kRSFIPixelFormatType, (__bridge CFDictionaryRef)(self.defaultPixelSettings), &pixelBuffer);
+    CVPixelBufferPoolRef pool = self.outputWriterInputAdapter.pixelBufferPool;
+    CVReturn status = CVPixelBufferPoolCreatePixelBuffer(NULL, pool, &pixelBuffer);
+    // Use this for debugging if the pool doesn't work:
+//    CVReturn status = CVPixelBufferCreate(NULL, [(NSNumber *)self.outputWriterInput.outputSettings[AVVideoWidthKey] unsignedIntegerValue], [(NSNumber *)self.outputWriterInput.outputSettings[AVVideoHeightKey] unsignedIntegerValue], kRSFIPixelFormatType, (__bridge CFDictionaryRef)(self.defaultPixelSettings), &pixelBuffer);
 
     if (status != kCVReturnSuccess)
     {
