@@ -7,7 +7,6 @@
 //
 
 #import "RSFrameInterpolator.h"
-#import <AppKit/AppKit.h>
 
 #define kRSFIBitmapInfo (kCGBitmapByteOrder32Little | kCGImageAlphaPremultipliedFirst)
 #define kRSFIPixelFormatType kCVPixelFormatType_32BGRA
