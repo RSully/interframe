@@ -7,7 +7,7 @@
 //
 
 #import <Foundation/Foundation.h>
-#import "RSFrameInterpolator.h"
+#import "RSExampleInterpolator.h"
 
 int main(int argc, const char * argv[])
 {
@@ -22,13 +22,12 @@ int main(int argc, const char * argv[])
 
         NSURL *inputUrl = [NSURL fileURLWithPath:[NSString stringWithUTF8String:argv[1]]];
         NSURL *outputUrl = [NSURL fileURLWithPath:[NSString stringWithUTF8String:argv[2]]];
+        [[NSFileManager defaultManager] removeItemAtURL:outputUrl error:nil];
 
         AVURLAsset *input = [AVURLAsset assetWithURL:inputUrl];
 
-
-        RSFrameInterpolator *fi = [[RSFrameInterpolator alloc] initWithAsset:input
-                                                                      output:outputUrl];
-        [fi interpolate];
+        RSExampleInterpolator *example = [[RSExampleInterpolator alloc] initWithAsset:input output:outputUrl];
+        [example interpolate];
 
         [[NSRunLoop currentRunLoop] run];
 
