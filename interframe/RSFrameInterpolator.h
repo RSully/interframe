@@ -8,6 +8,14 @@
 
 #import <Foundation/Foundation.h>
 #import <AVFoundation/AVFoundation.h>
+#import "RSFrameInterpolationState.h"
+
+@class RSFrameInterpolator;
+
+@protocol RSFrameInterpolatorDelegate <NSObject>
+-(CGImageRef)createInterpolatedImageForInterpolator:(RSFrameInterpolator *)interpolator
+                                          withState:(RSFrameInterpolationState *)state;
+@end
 
 
 @interface RSFrameInterpolator : NSObject
@@ -17,5 +25,7 @@
 -(void)interpolate;
 
 @property CGImageRef placeholderInterpolatedImage;
+
+@property (weak) id<RSFrameInterpolatorDelegate> delegate;
 
 @end

@@ -15,6 +15,7 @@
 		2B16EB2218F339DC000BA5AD /* RSFrameInterpolator.m in Sources */ = {isa = PBXBuildFile; fileRef = 2B16EB2118F339DC000BA5AD /* RSFrameInterpolator.m */; };
 		2B16EB2518F34167000BA5AD /* RSFrameInterpolationState.m in Sources */ = {isa = PBXBuildFile; fileRef = 2B16EB2418F34167000BA5AD /* RSFrameInterpolationState.m */; };
 		2B16EB2718F3439D000BA5AD /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2B16EB2618F3439D000BA5AD /* CoreGraphics.framework */; };
+		2B16EB2A18F45F27000BA5AD /* RSExampleInterpolator.m in Sources */ = {isa = PBXBuildFile; fileRef = 2B16EB2918F45F27000BA5AD /* RSExampleInterpolator.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -43,6 +44,8 @@
 		2B16EB2318F34167000BA5AD /* RSFrameInterpolationState.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RSFrameInterpolationState.h; sourceTree = "<group>"; };
 		2B16EB2418F34167000BA5AD /* RSFrameInterpolationState.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = RSFrameInterpolationState.m; sourceTree = "<group>"; };
 		2B16EB2618F3439D000BA5AD /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
+		2B16EB2818F45F27000BA5AD /* RSExampleInterpolator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RSExampleInterpolator.h; sourceTree = "<group>"; };
+		2B16EB2918F45F27000BA5AD /* RSExampleInterpolator.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = RSExampleInterpolator.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -92,10 +95,9 @@
 			isa = PBXGroup;
 			children = (
 				2B16EB1118F33888000BA5AD /* main.m */,
-				2B16EB2018F339DC000BA5AD /* RSFrameInterpolator.h */,
-				2B16EB2118F339DC000BA5AD /* RSFrameInterpolator.m */,
-				2B16EB2318F34167000BA5AD /* RSFrameInterpolationState.h */,
-				2B16EB2418F34167000BA5AD /* RSFrameInterpolationState.m */,
+				2B16EB2818F45F27000BA5AD /* RSExampleInterpolator.h */,
+				2B16EB2918F45F27000BA5AD /* RSExampleInterpolator.m */,
+				2B16EB2B18F45F30000BA5AD /* Interpolator */,
 				2B16EB1518F33888000BA5AD /* interframe.1 */,
 				2B16EB1318F33888000BA5AD /* Supporting Files */,
 			);
@@ -108,6 +110,17 @@
 				2B16EB1418F33888000BA5AD /* interframe-Prefix.pch */,
 			);
 			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		2B16EB2B18F45F30000BA5AD /* Interpolator */ = {
+			isa = PBXGroup;
+			children = (
+				2B16EB2018F339DC000BA5AD /* RSFrameInterpolator.h */,
+				2B16EB2118F339DC000BA5AD /* RSFrameInterpolator.m */,
+				2B16EB2318F34167000BA5AD /* RSFrameInterpolationState.h */,
+				2B16EB2418F34167000BA5AD /* RSFrameInterpolationState.m */,
+			);
+			name = Interpolator;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -163,6 +176,7 @@
 			files = (
 				2B16EB2518F34167000BA5AD /* RSFrameInterpolationState.m in Sources */,
 				2B16EB2218F339DC000BA5AD /* RSFrameInterpolator.m in Sources */,
+				2B16EB2A18F45F27000BA5AD /* RSExampleInterpolator.m in Sources */,
 				2B16EB1218F33888000BA5AD /* main.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

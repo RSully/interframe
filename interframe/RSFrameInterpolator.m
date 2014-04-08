@@ -101,10 +101,27 @@
 }
 
 
--(CGImageRef)createInterpolatedImageFromPrior:(CGImageRef)imagePrior andNext:(CGImageRef)imageNext {
+-(CGImageRef)createInterpolatedImageFromPrior:(CGImageRef)imagePrior andNext:(CGImageRef)imageNext
+                                     forFrame:(NSUInteger)frame frameCount:(NSUInteger)frameCount {
+    if (!self.delegate) return NULL;
+
+    RSFrameInterpolationState *state = [[RSFrameInterpolationState alloc] initWithPriorImage:imagePrior nextImage:imageNext
+                                                                                       frame:frame frameCount:frameCount];
+    return [self.delegate createInterpolatedImageForInterpolator:self withState:state];
+}
+-(CGImageRef)createInterpolatedImageFromPrior:(CGImageRef)imagePrior andNext_BAD:(CGImageRef)imageNext {
     // TODO: delegate this logic to interpolator
 //    return CGImageCreateCopy(imagePrior);
-    return CGImageCreateCopy(self.placeholderInterpolatedImage);
+//    return CGImageCreateCopy(self.placeholderInterpolatedImage);
+    CGContextRef context = CGBitmapContextCreate(NULL, CGImageGetWidth(imagePrior), CGImageGetHeight(imagePrior), CGImageGetBitsPerComponent(imagePrior), CGImageGetBytesPerRow(imagePrior), CGImageGetColorSpace(imagePrior), CGImageGetBitmapInfo(imagePrior));
+    CGContextSetAlpha(context, 0.5);
+    CGContextDrawImage(context, CGRectMake(0, 0, CGImageGetWidth(imagePrior), CGImageGetHeight(imagePrior)), imagePrior);
+    CGContextDrawImage(context, CGRectMake(0, 0, CGImageGetWidth(imagePrior), CGImageGetHeight(imagePrior)), imageNext);
+
+    CGImageRef result = CGBitmapContextCreateImage(context);
+    CGContextRelease(context);
+
+    return result;
 }
 -(void)interpolate {
 
@@ -135,7 +152,7 @@
     for (NSUInteger frame = 3; frame <= self.outputFrameCount; frame += 2)
     {
         // TODO: remove, debug only
-        if (frame > 100) break;
+        if (frame > 1200) break;
 
         // Frame numbers for output
         framePrior = frame - 2;
@@ -166,7 +183,8 @@
         imageNext = [self createCGImageFromPixelBuffer:pixelBufferNext];
 
 
-        imageInbetween = [self createInterpolatedImageFromPrior:imagePrior andNext:imageNext];
+        imageInbetween = [self createInterpolatedImageFromPrior:imagePrior andNext:imageNext
+                                                       forFrame:frameInbetween frameCount:self.outputFrameCount];
         pixelBufferInbetween = [self createPixelBufferFromCGImage:imageInbetween];
         if (!pixelBufferInbetween)
         {
