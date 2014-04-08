@@ -217,6 +217,7 @@
     [self.outputWriterInput markAsFinished];
     [self.outputWriter finishWritingWithCompletionHandler:^{
         NSLog(@"Finished writing");
+        [self.delegate interpolatorFinished:self];
         // TODO: ?
     }];
 

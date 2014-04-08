@@ -15,6 +15,7 @@
 @protocol RSFrameInterpolatorDelegate <NSObject>
 -(CGImageRef)createInterpolatedImageForInterpolator:(RSFrameInterpolator *)interpolator
                                           withState:(RSFrameInterpolationState *)state;
+-(void)interpolatorFinished:(RSFrameInterpolator *)interpolator;
 @end
 
 
