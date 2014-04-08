@@ -92,7 +92,6 @@
         self.defaultPixelSettings[(NSString *)kCVPixelBufferCGImageCompatibilityKey] = @(YES);
 
         self.outputWriterInput = [[AVAssetWriterInput alloc] initWithMediaType:AVMediaTypeVideo outputSettings:outputSettings];
-//        self.outputWriterInput.expectsMediaDataInRealTime = NO;
         self.outputWriterInputAdapter = [[AVAssetWriterInputPixelBufferAdaptor alloc] initWithAssetWriterInput:self.outputWriterInput
                                                                                    sourcePixelBufferAttributes:self.defaultPixelSettings];
         [self.outputWriter addInput:self.outputWriterInput];
@@ -109,20 +108,7 @@
                                                                                        frame:frame frameCount:frameCount];
     return [self.delegate createInterpolatedImageForInterpolator:self withState:state];
 }
--(CGImageRef)createInterpolatedImageFromPrior:(CGImageRef)imagePrior andNext_BAD:(CGImageRef)imageNext {
-    // TODO: delegate this logic to interpolator
-//    return CGImageCreateCopy(imagePrior);
-//    return CGImageCreateCopy(self.placeholderInterpolatedImage);
-    CGContextRef context = CGBitmapContextCreate(NULL, CGImageGetWidth(imagePrior), CGImageGetHeight(imagePrior), CGImageGetBitsPerComponent(imagePrior), CGImageGetBytesPerRow(imagePrior), CGImageGetColorSpace(imagePrior), CGImageGetBitmapInfo(imagePrior));
-    CGContextSetAlpha(context, 0.5);
-    CGContextDrawImage(context, CGRectMake(0, 0, CGImageGetWidth(imagePrior), CGImageGetHeight(imagePrior)), imagePrior);
-    CGContextDrawImage(context, CGRectMake(0, 0, CGImageGetWidth(imagePrior), CGImageGetHeight(imagePrior)), imageNext);
 
-    CGImageRef result = CGBitmapContextCreateImage(context);
-    CGContextRelease(context);
-
-    return result;
-}
 -(void)interpolate {
 
     BOOL readingOK = [self.inputAssetVideoReader startReading];
@@ -188,7 +174,7 @@
         pixelBufferInbetween = [self createPixelBufferFromCGImage:imageInbetween];
         if (!pixelBufferInbetween)
         {
-            NSLog(@"Failed to create pixel buffer");
+            NSLog(@"Failed to create pixel buffer from imageInbetween");
         }
         else
         {
@@ -332,13 +318,8 @@
     return context;
 }
 -(CVPixelBufferRef)createPixelBuffer {
-    NSLog(@"-createPixelBuffer");
     CVPixelBufferRef pixelBuffer = NULL;
-
-    CVPixelBufferPoolRef pool = self.outputWriterInputAdapter.pixelBufferPool;
-    CVReturn status = CVPixelBufferPoolCreatePixelBuffer(NULL, pool, &pixelBuffer);
-    // Use this for debugging if the pool doesn't work:
-//    CVReturn status = CVPixelBufferCreate(NULL, [(NSNumber *)self.outputWriterInput.outputSettings[AVVideoWidthKey] unsignedIntegerValue], [(NSNumber *)self.outputWriterInput.outputSettings[AVVideoHeightKey] unsignedIntegerValue], kRSFIPixelFormatType, (__bridge CFDictionaryRef)(self.defaultPixelSettings), &pixelBuffer);
+    CVReturn status = CVPixelBufferPoolCreatePixelBuffer(NULL, self.outputWriterInputAdapter.pixelBufferPool, &pixelBuffer);
 
     if (status != kCVReturnSuccess)
     {
