@@ -131,14 +131,14 @@
 
     // expr         explain                 output      input
     // -----------------------------------------------------------
-    // frame - 2 = first source frame   // 1 3 5    // 1 2 3
-    // frame - 1 = inbetween frame      // 2 4 6    //
-    // frame - 0 = last source frame    // 3 5 7    // 2 3 4
+    // frame - 2 = first source frame   // 0 2 4    // 0 1 2
+    // frame - 1 = inbetween frame      // 1 3 5    //
+    // frame - 0 = last source frame    // 2 4 6    // 1 2 3
     // -----------------------------------------------------------
-    for (NSUInteger frame = 3; frame <= self.outputFrameCount; frame += 2)
+    for (NSUInteger frame = 2; frame <= self.outputFrameCount; frame += 2)
     {
         // TODO: remove, debug only
-        if (frame > 1200) break;
+        if (frame > 40) break;
 
         // Frame numbers for output
         framePrior = frame - 2;
@@ -154,12 +154,15 @@
         // Handle first frame special
         if (framePrior == 0)
         {
+            NSLog(@"---- FIRST FRAME");
+
             sampleBufferPrior = [self.inputAssetVideoReaderOutput copyNextSampleBuffer];
             pixelBufferPrior = CMSampleBufferGetImageBuffer(sampleBufferPrior);
             imagePrior = [self createCGImageFromPixelBuffer:pixelBufferPrior];
 
             // We don't want to duplicate writes, so do it here
-            [self lazilyAppendPixelBuffer:pixelBufferPrior withPresentationTime:timePrior];
+//            NSLog(@"Appending first frame (%f)", CMTimeGetSeconds(timePrior));
+//            [self lazilyAppendPixelBuffer:pixelBufferPrior withPresentationTime:timePrior];
 
             CFRelease(sampleBufferPrior), sampleBufferPrior = NULL;
         }
@@ -178,9 +181,10 @@
         }
         else
         {
-            [self lazilyAppendPixelBufferAsSampleBuffer:pixelBufferInbetween withPresentationTime:timeInbetween];
+            NSLog(@"Appending inbetween frame (%f)", CMTimeGetSeconds(timeInbetween));
+            [self lazilyAppendPixelBuffer:pixelBufferInbetween withPresentationTime:timeInbetween];
         }
-
+        NSLog(@"Appending next frame (%f)", CMTimeGetSeconds(timeNext));
         [self lazilyAppendPixelBuffer:pixelBufferNext withPresentationTime:timeNext];
 
 
@@ -214,13 +218,11 @@
         [NSThread sleepForTimeInterval:0.005];
     }
 
-    NSLog(@"{%lld / %d => %f}", presentationTime.value, presentationTime.timescale, CMTimeGetSeconds(presentationTime));
     BOOL result = [self.outputWriterInputAdapter appendPixelBuffer:pixelBuffer withPresentationTime:presentationTime];
     if (!result)
     {
         NSLog(@"failed to append pixel buffer %@", self.outputWriter.error);
     }
-    NSLog(@"finished -lazilyAppendPixelBuffer");
 }
 -(void)lazilyAppendPixelBufferAsSampleBuffer:(CVPixelBufferRef)pixelBuffer withPresentationTime:(CMTime)presentationTime {
     CMSampleBufferRef sampleBuffer = NULL;
@@ -254,7 +256,6 @@
     {
         NSLog(@"failed to append sample buffer %@", self.outputWriter.error);
     }
-    NSLog(@"finished -lazilyAppendSampleBuffer");
 }
 
 /**
