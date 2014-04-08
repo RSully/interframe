@@ -128,9 +128,9 @@
 
     // expr         explain                 output      input
     // -----------------------------------------------------------
-    // frame - 2 = first source frame   // 0 2 4    // 0 1 2
-    // frame - 1 = inbetween frame      // 1 3 5    //
-    // frame - 0 = last source frame    // 2 4 6    // 1 2 3
+    // frame - 2 = first source frame   // 1 3 5    // 1 2 3
+    // frame - 1 = inbetween frame      // 2 4 6    //
+    // frame - 0 = last source frame    // 3 5 7    // 2 3 4
     // -----------------------------------------------------------
     for (NSUInteger frame = 3; frame <= self.outputFrameCount; frame += 2)
     {
@@ -172,10 +172,13 @@
         {
             NSLog(@"Failed to create pixel buffer");
         }
+        else
+        {
+            [self lazilyAppendPixelBufferAsSampleBuffer:pixelBufferInbetween withPresentationTime:timeInbetween];
+        }
 
-
-        [self lazilyAppendPixelBufferAsSampleBuffer:pixelBufferInbetween withPresentationTime:timeInbetween];
         [self lazilyAppendPixelBuffer:pixelBufferNext withPresentationTime:timeNext];
+
 
 
         // Cleanup
