@@ -88,8 +88,8 @@
 		2B16EB5518F4A353000BA5AD /* Accelerate.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Accelerate.framework; path = System/Library/Frameworks/Accelerate.framework; sourceTree = SDKROOT; };
 		2B16EB5718F58248000BA5AD /* RSFrameInterpolatorPassthroughInstruction.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RSFrameInterpolatorPassthroughInstruction.h; path = InterframeClasses/RSFrameInterpolatorPassthroughInstruction.h; sourceTree = "<group>"; };
 		2B16EB5818F58248000BA5AD /* RSFrameInterpolatorPassthroughInstruction.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = RSFrameInterpolatorPassthroughInstruction.m; path = InterframeClasses/RSFrameInterpolatorPassthroughInstruction.m; sourceTree = "<group>"; };
-		2B16EB5A18F5846B000BA5AD /* RSFrameInterpolatorInterpolationInstruction.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RSFrameInterpolatorInterpolationInstruction.h; sourceTree = "<group>"; };
-		2B16EB5B18F5846B000BA5AD /* RSFrameInterpolatorInterpolationInstruction.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = RSFrameInterpolatorInterpolationInstruction.m; sourceTree = "<group>"; };
+		2B16EB5A18F5846B000BA5AD /* RSFrameInterpolatorInterpolationInstruction.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RSFrameInterpolatorInterpolationInstruction.h; path = InterframeClasses/RSFrameInterpolatorInterpolationInstruction.h; sourceTree = "<group>"; };
+		2B16EB5B18F5846B000BA5AD /* RSFrameInterpolatorInterpolationInstruction.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = RSFrameInterpolatorInterpolationInstruction.m; path = InterframeClasses/RSFrameInterpolatorInterpolationInstruction.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
