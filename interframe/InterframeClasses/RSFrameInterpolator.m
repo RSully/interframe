@@ -117,27 +117,29 @@
     AVCompositionTrack *inputVideoTrack = inputVideoTracks[0];
 
     NSError *err = nil;
-    AVMutableCompositionTrack *compositionVideoTracks[2];
-    compositionVideoTracks[0] = [self.outputComposition addMutableTrackWithMediaType:AVMediaTypeVideo
+    AVMutableCompositionTrack *compositionVideoTrackPrior, *compositionVideoTrackNext;
+    compositionVideoTrackPrior = [self.outputComposition addMutableTrackWithMediaType:AVMediaTypeVideo
+                                                                     preferredTrackID:kCMPersistentTrackID_Invalid];
+    compositionVideoTrackNext = [self.outputComposition addMutableTrackWithMediaType:AVMediaTypeVideo
                                                                     preferredTrackID:kCMPersistentTrackID_Invalid];
-    compositionVideoTracks[1] = [self.outputComposition addMutableTrackWithMediaType:AVMediaTypeVideo
-                                                                    preferredTrackID:kCMPersistentTrackID_Invalid];
-    CMPersistentTrackID priorID = compositionVideoTracks[0].trackID;
-    CMPersistentTrackID nextID = compositionVideoTracks[1].trackID;
+    CMPersistentTrackID priorID = compositionVideoTrackPrior.trackID;
+    CMPersistentTrackID nextID = compositionVideoTrackNext.trackID;
 
     CMTime priorStartTime = inputVideoTrack.timeRange.start;
     CMTime nextStartTime = CMTimeAdd(priorStartTime, frameDuration);
 
-    [compositionVideoTracks[0] insertTimeRange:inputVideoTrack.timeRange
-                                       ofTrack:inputVideoTrack
-                                        atTime:priorStartTime
-                                         error:&err];
+    [compositionVideoTrackPrior insertTimeRange:inputVideoTrack.timeRange
+                                        ofTrack:inputVideoTrack
+                                         atTime:priorStartTime
+                                          error:&err];
+//    [compositionVideoTrackPrior insertEmptyTimeRange:CMTimeRangeMake(nextStartTime, frameDuration)];
     if (err)
     {
         NSLog(@"** Failed to insert prior video track into output composition");
         return;
     }
-    [compositionVideoTracks[1] insertTimeRange:inputVideoTrack.timeRange
+//    [compositionVideoTrackNext insertEmptyTimeRange:CMTimeRangeMake(priorStartTime, frameDuration)];
+    [compositionVideoTrackNext insertTimeRange:inputVideoTrack.timeRange
                                        ofTrack:inputVideoTrack
                                         atTime:nextStartTime
                                          error:&err];
@@ -147,16 +149,20 @@
         return;
     }
 
+    NSLog(@"prior: %d, next: %d", priorID, nextID);
+
     /*
      * Handle creating timeranges and instructions for output
      */
 
     // Only 1 frame comes from prior
     CMTimeRange *passthroughTimeRangesPrior = alloca(sizeof(CMTimeRange) * 1);
+
+    NSUInteger framesAfterPrior = self.inputFrameCount - 1;
     // The rest of the source frames come from next
-    CMTimeRange *passthroughTimeRangesNext = alloca(sizeof(CMTimeRange) * (self.inputFrameCount - 1));
+    CMTimeRange *passthroughTimeRangesNext = alloca(sizeof(CMTimeRange) * (framesAfterPrior));
     // Everything else from inbetween
-    CMTimeRange *inbetweenTimeRanges = alloca(sizeof(CMTimeRange) * (self.inputFrameCount - 1));
+    CMTimeRange *inbetweenTimeRanges = alloca(sizeof(CMTimeRange) * (framesAfterPrior));
 
     CMTime startTime = priorStartTime;
 
