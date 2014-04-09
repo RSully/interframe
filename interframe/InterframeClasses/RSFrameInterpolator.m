@@ -10,6 +10,9 @@
 #import "RSFrameInterpolatorPassthroughInstruction.h"
 #import "RSFrameInterpolatorInterpolationInstruction.h"
 
+//#define kRSDurationResolution 600
+#define kRSDurationResolution NSEC_PER_SEC
+
 @interface RSFrameInterpolator ()
 
 @property (strong) NSMutableDictionary *defaultPixelSettings;
@@ -41,22 +44,27 @@
     if ((self = [self init]))
     {
         self.inputAsset = asset;
+        self.outputUrl = output;
+
 
         // Setup input metadata
         self.inputAssetVideoTrack = [self.inputAsset tracksWithMediaType:AVMediaTypeVideo][0];
+        Float64 inputDuration = CMTimeGetSeconds(self.inputAssetVideoTrack.timeRange.duration);
         self.inputFPS = self.inputAssetVideoTrack.nominalFrameRate;
-        self.inputFrameCount = round(self.inputFPS * CMTimeGetSeconds(self.inputAsset.duration));
+        self.inputFrameCount = round(self.inputFPS * inputDuration);
 
         // Calculate expected output metadata
-        self.outputFPS = (self.inputFPS * 2.0); // TODO: this isn't right exactly
         self.outputFrameCount = (self.inputFrameCount * 2.0) - 1;
+        self.outputFPS = self.outputFrameCount / inputDuration;
 
 
         self.outputComposition = [AVMutableComposition composition];
-        self.outputVideoComposition = [AVMutableVideoComposition videoCompositionWithPropertiesOfAsset:self.inputAsset];
-        self.outputVideoComposition.frameDuration = CMTimeMakeWithSeconds(1 / self.outputFPS, NSEC_PER_SEC);
+        self.outputVideoComposition = [AVMutableVideoComposition videoComposition];
+        self.outputVideoComposition.renderSize = self.inputAssetVideoTrack.naturalSize;
+        self.outputVideoComposition.frameDuration = CMTimeMakeWithSeconds(1.0 / self.outputFPS, kRSDurationResolution);
 
-        self.outputUrl = output;
+        NSLog(@"Input of %f seconds", inputDuration);
+        CMTimeRangeShow(self.inputAssetVideoTrack.timeRange);
     }
     return self;
 }
@@ -148,49 +156,49 @@
     // The rest of the source frames come from next
     CMTimeRange *passthroughTimeRangesNext = alloca(sizeof(CMTimeRange) * (self.inputFrameCount - 1));
     // Everything else from inbetween
-    CMTimeRange *inbetweenTimeRanges = alloca(sizeof(CMTimeRange) * (self.outputFrameCount - self.inputFrameCount));
+    CMTimeRange *inbetweenTimeRanges = alloca(sizeof(CMTimeRange) * (self.inputFrameCount - 1));
+
+    CMTime startTime = priorStartTime;
 
     // Handle all timeranges
     {
         // Handle prior:
         {
-            NSUInteger framePrior = 0;
-            CMTime timePrior = CMTimeMakeWithSeconds(framePrior / self.outputFPS, NSEC_PER_SEC);
-            passthroughTimeRangesPrior[0] = CMTimeRangeMake(timePrior, frameDuration);
-
+            passthroughTimeRangesPrior[0] = CMTimeRangeMake(startTime, frameDuration);
         }
-        for (NSUInteger frame = 2, i = 0; frame < self.outputFrameCount; frame += 2, i++)
+        for (NSUInteger frame = 2, i = 0; frame <= self.outputFrameCount; frame += 2, i++)
         {
-            NSUInteger frameInbetween = frame - 1;
-            NSUInteger frameNext = frame;
+            startTime = CMTimeMakeWithSeconds((frame - 1) / self.outputFPS, kRSDurationResolution);
+            inbetweenTimeRanges[i] = CMTimeRangeMake(CMTimeAdd(priorStartTime, startTime), frameDuration);
 
-            CMTime timeInbetween = CMTimeMakeWithSeconds(frameInbetween / self.outputFPS, NSEC_PER_SEC);
-            CMTime timeNext = CMTimeMakeWithSeconds(frameNext / self.outputFPS, NSEC_PER_SEC);
-
-            inbetweenTimeRanges[i] = CMTimeRangeMake(timeInbetween, frameDuration);
-            passthroughTimeRangesNext[i] = CMTimeRangeMake(timeNext, frameDuration);
+            startTime = CMTimeMakeWithSeconds((frame) / self.outputFPS, kRSDurationResolution);
+            passthroughTimeRangesNext[i] = CMTimeRangeMake(CMTimeAdd(priorStartTime, startTime), frameDuration);
         }
     }
 
     NSMutableArray *instructions = [NSMutableArray arrayWithCapacity:self.outputFrameCount];
-    RSFrameInterpolatorPassthroughInstruction *instructionPrior, *instructionNext;
+    RSFrameInterpolatorPassthroughInstruction *instructionPassthrough;
     RSFrameInterpolatorInterpolationInstruction *instructionInbetween;
 
     // Handle all instructions
     {
         // Handle prior
         {
-            instructionPrior = [[RSFrameInterpolatorPassthroughInstruction alloc] initWithPassthroughTrackID:priorID forTimeRange:passthroughTimeRangesPrior[0]];
-            [instructions addObject:instructionPrior];
+            instructionPassthrough = [[RSFrameInterpolatorPassthroughInstruction alloc] initWithPassthroughTrackID:priorID forTimeRange:passthroughTimeRangesPrior[0]];
+            [instructions addObject:instructionPassthrough];
+            NSLog(@"%@", instructionPassthrough);
         }
 
-        for (NSUInteger frame = 2, i = 0; frame < self.outputFrameCount; frame += 2, i++)
+        for (NSUInteger frame = 2, i = 0; frame <= self.outputFrameCount; frame += 2, i++)
         {
             instructionInbetween = [[RSFrameInterpolatorInterpolationInstruction alloc] initWithPriorFrameTrackID:priorID andNextFrameTrackID:nextID forTimeRange:inbetweenTimeRanges[i]];
-            instructionNext = [[RSFrameInterpolatorPassthroughInstruction alloc] initWithPassthroughTrackID:nextID forTimeRange:passthroughTimeRangesNext[i]];
+            instructionPassthrough = [[RSFrameInterpolatorPassthroughInstruction alloc] initWithPassthroughTrackID:nextID forTimeRange:passthroughTimeRangesNext[i]];
 
             [instructions addObject:instructionInbetween];
-            [instructions addObject:instructionNext];
+            [instructions addObject:instructionPassthrough];
+
+            NSLog(@"%@", instructionInbetween);
+            NSLog(@"%@", instructionPassthrough);
         }
     }
 
@@ -214,9 +222,17 @@
 
 
     [self.exportSession exportAsynchronouslyWithCompletionHandler:^{
-        NSLog(@"Exported!");
-        NSLog(@"%@", self.exportSession);
-        NSLog(@"%@", self.exportSession.error);
+        NSLog(@"Export completion, %ld", self.exportSession.status);
+        NSLog(@"%@, %@", self.exportSession, self.outputVideoComposition);
+        switch (self.exportSession.status)
+        {
+            case AVAssetExportSessionStatusCancelled:
+                NSLog(@".. canceled");
+                break;
+            case AVAssetExportSessionStatusFailed:
+                NSLog(@".. failed: %@", self.exportSession.error);
+                break;
+        }
 
         [self.delegate interpolatorFinished:self];
     }];
