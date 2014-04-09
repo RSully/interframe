@@ -29,6 +29,7 @@
 		2B16EB5318F463D9000BA5AD /* BitmapRotationManipulator.m in Sources */ = {isa = PBXBuildFile; fileRef = 2B16EB4618F463D9000BA5AD /* BitmapRotationManipulator.m */; };
 		2B16EB5418F463D9000BA5AD /* BitmapScaleManipulator.m in Sources */ = {isa = PBXBuildFile; fileRef = 2B16EB4818F463D9000BA5AD /* BitmapScaleManipulator.m */; };
 		2B16EB5618F4A353000BA5AD /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2B16EB5518F4A353000BA5AD /* Accelerate.framework */; };
+		FA888EF618F4BCA20085406A /* RSAverageSource.m in Sources */ = {isa = PBXBuildFile; fileRef = FA888EF518F4BCA20085406A /* RSAverageSource.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -84,6 +85,8 @@
 		2B16EB4718F463D9000BA5AD /* BitmapScaleManipulator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BitmapScaleManipulator.h; sourceTree = "<group>"; };
 		2B16EB4818F463D9000BA5AD /* BitmapScaleManipulator.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BitmapScaleManipulator.m; sourceTree = "<group>"; };
 		2B16EB5518F4A353000BA5AD /* Accelerate.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Accelerate.framework; path = System/Library/Frameworks/Accelerate.framework; sourceTree = SDKROOT; };
+		FA888EF418F4BCA20085406A /* RSAverageSource.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RSAverageSource.h; sourceTree = "<group>"; };
+		FA888EF518F4BCA20085406A /* RSAverageSource.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = RSAverageSource.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -167,6 +170,8 @@
 			children = (
 				2B16EB2818F45F27000BA5AD /* RSExampleInterpolator.h */,
 				2B16EB2918F45F27000BA5AD /* RSExampleInterpolator.m */,
+				FA888EF418F4BCA20085406A /* RSAverageSource.h */,
+				FA888EF518F4BCA20085406A /* RSAverageSource.m */,
 				2B16EB2D18F463D9000BA5AD /* ANImageBitmapRep */,
 			);
 			name = Example;
@@ -283,6 +288,7 @@
 				2B16EB4B18F463D9000BA5AD /* NSImage+ANImageBitmapRep.m in Sources */,
 				2B16EB5318F463D9000BA5AD /* BitmapRotationManipulator.m in Sources */,
 				2B16EB5418F463D9000BA5AD /* BitmapScaleManipulator.m in Sources */,
+				FA888EF618F4BCA20085406A /* RSAverageSource.m in Sources */,
 				2B16EB5018F463D9000BA5AD /* BitmapContextManipulator.m in Sources */,
 				2B16EB5118F463D9000BA5AD /* BitmapCropManipulator.m in Sources */,
 				2B16EB4D18F463D9000BA5AD /* UIImage+ANImageBitmapRep.m in Sources */,
