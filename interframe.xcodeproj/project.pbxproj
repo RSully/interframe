@@ -31,6 +31,7 @@
 		2B16EB5918F58248000BA5AD /* RSFrameInterpolatorPassthroughInstruction.m in Sources */ = {isa = PBXBuildFile; fileRef = 2B16EB5818F58248000BA5AD /* RSFrameInterpolatorPassthroughInstruction.m */; };
 		2B16EB5C18F5846B000BA5AD /* RSFrameInterpolatorInterpolationInstruction.m in Sources */ = {isa = PBXBuildFile; fileRef = 2B16EB5B18F5846B000BA5AD /* RSFrameInterpolatorInterpolationInstruction.m */; };
 		2B16EB6018F596AD000BA5AD /* RSFrameInterpolatorDefaultCompositor.m in Sources */ = {isa = PBXBuildFile; fileRef = 2B16EB5F18F596AD000BA5AD /* RSFrameInterpolatorDefaultCompositor.m */; };
+		2B16EB6418F5C1F0000BA5AD /* RSFrameInterpolatorBaseInstruction.m in Sources */ = {isa = PBXBuildFile; fileRef = 2B16EB6318F5C1F0000BA5AD /* RSFrameInterpolatorBaseInstruction.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -90,6 +91,8 @@
 		2B16EB5B18F5846B000BA5AD /* RSFrameInterpolatorInterpolationInstruction.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = RSFrameInterpolatorInterpolationInstruction.m; path = InterframeClasses/RSFrameInterpolatorInterpolationInstruction.m; sourceTree = "<group>"; };
 		2B16EB5E18F596AD000BA5AD /* RSFrameInterpolatorDefaultCompositor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RSFrameInterpolatorDefaultCompositor.h; path = InterframeClasses/RSFrameInterpolatorDefaultCompositor.h; sourceTree = "<group>"; };
 		2B16EB5F18F596AD000BA5AD /* RSFrameInterpolatorDefaultCompositor.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = RSFrameInterpolatorDefaultCompositor.m; path = InterframeClasses/RSFrameInterpolatorDefaultCompositor.m; sourceTree = "<group>"; };
+		2B16EB6218F5C1F0000BA5AD /* RSFrameInterpolatorBaseInstruction.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RSFrameInterpolatorBaseInstruction.h; path = InterframeClasses/RSFrameInterpolatorBaseInstruction.h; sourceTree = "<group>"; };
+		2B16EB6318F5C1F0000BA5AD /* RSFrameInterpolatorBaseInstruction.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = RSFrameInterpolatorBaseInstruction.m; path = InterframeClasses/RSFrameInterpolatorBaseInstruction.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -236,6 +239,8 @@
 		2B16EB5D18F586A6000BA5AD /* Instructions */ = {
 			isa = PBXGroup;
 			children = (
+				2B16EB6218F5C1F0000BA5AD /* RSFrameInterpolatorBaseInstruction.h */,
+				2B16EB6318F5C1F0000BA5AD /* RSFrameInterpolatorBaseInstruction.m */,
 				2B16EB5718F58248000BA5AD /* RSFrameInterpolatorPassthroughInstruction.h */,
 				2B16EB5818F58248000BA5AD /* RSFrameInterpolatorPassthroughInstruction.m */,
 				2B16EB5A18F5846B000BA5AD /* RSFrameInterpolatorInterpolationInstruction.h */,
@@ -305,6 +310,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				2B16EB4C18F463D9000BA5AD /* OSCommonImage.m in Sources */,
+				2B16EB6418F5C1F0000BA5AD /* RSFrameInterpolatorBaseInstruction.m in Sources */,
 				2B16EB4F18F463D9000BA5AD /* CGImageContainer.m in Sources */,
 				2B16EB4B18F463D9000BA5AD /* NSImage+ANImageBitmapRep.m in Sources */,
 				2B16EB6018F596AD000BA5AD /* RSFrameInterpolatorDefaultCompositor.m in Sources */,
