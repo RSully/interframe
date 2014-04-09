@@ -8,8 +8,6 @@
 
 #import "RSFrameInterpolator.h"
 
-#define kRSFIBitmapInfo (kCGBitmapByteOrder32Little | kCGImageAlphaPremultipliedFirst)
-#define kRSFIPixelFormatType kCVPixelFormatType_32BGRA
 
 @interface RSFrameInterpolator ()
 
@@ -22,6 +20,9 @@
 @property float inputFPS;
 @property NSUInteger inputFrameCount;
 
+// Output composition
+@property (strong) AVMutableComposition *outputComposition;
+@property (strong) AVMutableVideoComposition *outputVideoComposition;
 // Output metadata
 @property float outputFPS;
 @property NSUInteger outputFrameCount;
@@ -48,6 +49,9 @@
         self.outputFrameCount = (self.inputFrameCount * 2.0) - 1;
 
 
+        self.outputComposition = [AVMutableComposition composition];
+        self.outputVideoComposition = [AVMutableVideoComposition videoCompositionWithPropertiesOfAsset:self.inputAsset];
+        self.outputVideoComposition.frameDuration = CMTimeMakeWithSeconds(1 / self.outputFPS, NSEC_PER_SEC);
 
 //        // Setup output writer
 //        NSString *fileType = CFBridgingRelease(UTTypeCreatePreferredIdentifierForTag(kUTTagClassFilenameExtension, (__bridge CFStringRef)([output pathExtension]), NULL));
@@ -64,9 +68,8 @@
     return self;
 }
 
--(void)setCompositor:(id<RSFrameInterpolatorCompositor>)compositor {
-    _compositor = compositor;
-    // TODO: set composition's compositor
+-(void)setCompositor:(Class<RSFrameInterpolatorCompositor>)compositor {
+    self.outputVideoComposition.customVideoCompositorClass = compositor;
 }
 
 

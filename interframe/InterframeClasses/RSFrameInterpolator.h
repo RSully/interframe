@@ -9,7 +9,6 @@
 #import <Foundation/Foundation.h>
 #import <CoreGraphics/CoreGraphics.h>
 #import <AVFoundation/AVFoundation.h>
-#import "RSFrameInterpolationState.h"
 
 @class RSFrameInterpolator;
 
@@ -25,11 +24,12 @@
 
 -(id)initWithAsset:(AVAsset *)asset output:(NSURL *)output;
 
+
 -(void)interpolate;
 
-@property CGImageRef placeholderInterpolatedImage;
+
+-(void)setCompositor:(Class<RSFrameInterpolatorCompositor>)compositor;
 
 @property (weak) id<RSFrameInterpolatorDelegate> delegate;
-@property (nonatomic) id<RSFrameInterpolatorCompositor> compositor;
 
 @end

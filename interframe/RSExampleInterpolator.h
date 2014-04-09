@@ -11,7 +11,7 @@
 #import "RSFrameInterpolator.h"
 #import "ANImageBitmapRep.h"
 
-@interface RSExampleInterpolator : NSObject <RSFrameInterpolatorDelegate, RSFrameInterpolatorSource>
+@interface RSExampleInterpolator : NSObject <RSFrameInterpolatorDelegate, RSFrameInterpolatorCompositor>
 
 -(id)initWithAsset:(AVAsset *)asset output:(NSURL *)output;
 
