@@ -35,6 +35,7 @@
 
 -(void)interpolatorFinished:(RSFrameInterpolator *)interpolator {
     NSLog(@"Finished!");
+    exit(0);
 }
 
 @end
