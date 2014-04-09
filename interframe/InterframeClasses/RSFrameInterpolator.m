@@ -53,17 +53,6 @@
         self.outputVideoComposition = [AVMutableVideoComposition videoCompositionWithPropertiesOfAsset:self.inputAsset];
         self.outputVideoComposition.frameDuration = CMTimeMakeWithSeconds(1 / self.outputFPS, NSEC_PER_SEC);
 
-//        // Setup output writer
-//        NSString *fileType = CFBridgingRelease(UTTypeCreatePreferredIdentifierForTag(kUTTagClassFilenameExtension, (__bridge CFStringRef)([output pathExtension]), NULL));
-//        NSDictionary *outputSettings = @{
-//                                         AVVideoCodecKey: AVVideoCodecH264,
-//                                         AVVideoHeightKey: @(self.inputAssetVideoTrack.naturalSize.height),
-//                                         AVVideoWidthKey: @(self.inputAssetVideoTrack.naturalSize.width),
-////                                         AVVideoCompressionPropertiesKey: @{
-////                                                 AVVideoProfileLevelKey: AVVideoProfileLevelH264High41,
-////                                                 AVVideoAverageBitRateKey: @(5000)
-////                                                 }
-//                                         };
     }
     return self;
 }
