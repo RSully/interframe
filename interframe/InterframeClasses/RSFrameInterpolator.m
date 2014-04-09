@@ -80,13 +80,13 @@
     // Copy any tracks that aren't video
     for (AVAssetTrack *inputTrack in self.inputAsset.tracks)
     {
-        AVMutableCompositionTrack *outputTrack = [self.outputComposition addMutableTrackWithMediaType:inputTrack.mediaType preferredTrackID:inputTrack.trackID];
-
         if ([inputTrack.mediaType isEqualToString:AVMediaTypeVideo])
         {
             [inputVideoTracks addObject:inputTrack];
             continue;
         }
+
+        AVMutableCompositionTrack *outputTrack = [self.outputComposition addMutableTrackWithMediaType:inputTrack.mediaType preferredTrackID:inputTrack.trackID];
 
         NSError *err = nil;
         [outputTrack insertTimeRange:inputTrack.timeRange
@@ -117,8 +117,8 @@
     CMPersistentTrackID priorID = compositionVideoTracks[0].trackID;
     CMPersistentTrackID nextID = compositionVideoTracks[1].trackID;
 
-    CMTime priorStartTime = CMTimeMakeWithSeconds(0 / self.outputFPS, NSEC_PER_SEC);
-    CMTime nextStartTime = CMTimeMakeWithSeconds(1 / self.outputFPS, NSEC_PER_SEC);
+    CMTime priorStartTime = inputVideoTrack.timeRange.start;
+    CMTime nextStartTime = CMTimeAdd(priorStartTime, frameDuration);
 
     [compositionVideoTracks[0] insertTimeRange:inputVideoTrack.timeRange
                                        ofTrack:inputVideoTrack
