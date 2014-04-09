@@ -175,11 +175,13 @@
         // Handle prior:
         {
             CMTimeRange passthroughTimeRangePrior = CMTimeRangeMake(startTime, frameDuration);
-            CMTimeRangeShow(passthroughTimeRangePrior);
 
-            instructionPassthrough = [[RSFrameInterpolatorPassthroughInstruction alloc] initWithPassthroughTrackID:priorID forTimeRange:passthroughTimeRangePrior];
+            instructionPassthrough = [[RSFrameInterpolatorPassthroughInstruction alloc] initWithPassthroughTrackID:priorID
+                                                                                                      forTimeRange:passthroughTimeRangePrior];
 
             [instructions addObject:instructionPassthrough];
+
+            CMTimeRangeShow(passthroughTimeRangePrior);
         }
         for (NSUInteger frame = 2, i = 0; frame < self.outputFrameCount; frame += 2, i++)
         {
@@ -190,8 +192,11 @@
             CMTimeRange passthroughTimeRangeNext = CMTimeRangeMake(CMTimeAdd(priorStartTime, startTime), frameDuration);
 
 
-            instructionInbetween = [[RSFrameInterpolatorInterpolationInstruction alloc] initWithPriorFrameTrackID:priorID andNextFrameTrackID:nextID forTimeRange:inbetweenTimeRange];
-            instructionPassthrough = [[RSFrameInterpolatorPassthroughInstruction alloc] initWithPassthroughTrackID:nextID forTimeRange:passthroughTimeRangeNext];
+            instructionInbetween = [[RSFrameInterpolatorInterpolationInstruction alloc] initWithPriorFrameTrackID:priorID
+                                                                                              andNextFrameTrackID:nextID
+                                                                                                     forTimeRange:inbetweenTimeRange];
+            instructionPassthrough = [[RSFrameInterpolatorPassthroughInstruction alloc] initWithPassthroughTrackID:nextID
+                                                                                                      forTimeRange:passthroughTimeRangeNext];
 
             [instructions addObject:instructionInbetween];
             [instructions addObject:instructionPassthrough];
