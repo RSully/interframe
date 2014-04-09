@@ -7,10 +7,14 @@
 //
 
 #import <Foundation/Foundation.h>
+#import <Accelerate/Accelerate.h>
 #import "RSFrameInterpolator.h"
 #import "ANImageBitmapRep.h"
+#import "RSAverageSource.h"
 
-@interface RSExampleInterpolator : NSObject <RSFrameInterpolatorDelegate>
+@interface RSExampleInterpolator : NSObject <RSFrameInterpolatorDelegate> {
+    RSAverageSource * source;
+}
 
 -(id)initWithAsset:(AVAsset *)asset output:(NSURL *)output;
 

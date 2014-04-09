@@ -106,7 +106,7 @@
 
     RSFrameInterpolationState *state = [[RSFrameInterpolationState alloc] initWithPriorImage:imagePrior nextImage:imageNext
                                                                                        frame:frame frameCount:frameCount];
-    return [self.delegate newInterpolatedImageForInterpolator:self withState:state];
+    return [self.source newInterpolatedImageForInterpolator:self withState:state];
 }
 
 -(void)interpolate {

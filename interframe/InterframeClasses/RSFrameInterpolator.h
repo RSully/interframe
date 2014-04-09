@@ -14,9 +14,12 @@
 @class RSFrameInterpolator;
 
 @protocol RSFrameInterpolatorDelegate <NSObject>
+-(void)interpolatorFinished:(RSFrameInterpolator *)interpolator;
+@end
+
+@protocol RSFrameInterpolatorSource <NSObject>
 -(CGImageRef)newInterpolatedImageForInterpolator:(RSFrameInterpolator *)interpolator
                                        withState:(RSFrameInterpolationState *)state;
--(void)interpolatorFinished:(RSFrameInterpolator *)interpolator;
 @end
 
 
@@ -29,5 +32,6 @@
 @property CGImageRef placeholderInterpolatedImage;
 
 @property (weak) id<RSFrameInterpolatorDelegate> delegate;
+@property (weak) id<RSFrameInterpolatorSource> source;
 
 @end
