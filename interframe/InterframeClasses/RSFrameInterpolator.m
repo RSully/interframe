@@ -165,43 +165,42 @@
 
 
     NSMutableArray *instructions = [NSMutableArray arrayWithCapacity:self.outputFrameCount];
-    RSFrameInterpolatorPassthroughInstruction *instructionPassthrough;
-    RSFrameInterpolatorInterpolationInstruction *instructionInbetween;
 
     CMTime startTime = priorStartTime;
 
-    // Handle prior:
-    {
-        CMTimeRange passthroughTimeRangePrior = CMTimeRangeMake(startTime, frameDuration);
+    NSUInteger framePrior, frameInbetween, frameNext;
+    CMTime timePrior, timeInbetween, timeNext;
+    CMTimeRange timeRangePrior, timeRangeInbetween, timeRangeNext;
 
-        instructionPassthrough = [[RSFrameInterpolatorPassthroughInstruction alloc] initWithPassthroughTrackID:priorID
-                                                                                                  forTimeRange:passthroughTimeRangePrior];
-
-        [instructions addObject:instructionPassthrough];
-
-        CMTimeRangeShow(passthroughTimeRangePrior);
-    }
     // Then handle all inbetween+next:
     for (NSUInteger frame = 2, i = 0; frame < self.outputFrameCount; frame += 2, i++)
     {
-        startTime = CMTimeMakeWithSeconds((frame - 1) / self.outputFPS, kRSDurationResolution);
-        CMTimeRange inbetweenTimeRange = CMTimeRangeMake(CMTimeAdd(priorStartTime, startTime), frameDuration);
+        @autoreleasepool {
+            framePrior = frame - 2;
+            frameInbetween = frame - 1;
+            frameNext = frame;
 
-        startTime = CMTimeMakeWithSeconds((frame) / self.outputFPS, kRSDurationResolution);
-        CMTimeRange passthroughTimeRangeNext = CMTimeRangeMake(CMTimeAdd(priorStartTime, startTime), frameDuration);
+            timePrior = CMTimeAdd(startTime, CMTimeMakeWithSeconds(framePrior / self.outputFPS, kRSDurationResolution));
+            timeInbetween = CMTimeAdd(startTime, CMTimeMakeWithSeconds(frameInbetween / self.outputFPS, kRSDurationResolution));
+            timeNext = CMTimeAdd(startTime, CMTimeMakeWithSeconds(frameNext / self.outputFPS, kRSDurationResolution));
 
+            timeRangePrior = CMTimeRangeMake(timePrior, frameDuration);
+            timeRangeInbetween = CMTimeRangeMake(timeInbetween, frameDuration);
+            timeRangeNext = CMTimeRangeMake(timeNext, frameDuration);
 
-        instructionInbetween = [[RSFrameInterpolatorInterpolationInstruction alloc] initWithPriorFrameTrackID:priorID
-                                                                                          andNextFrameTrackID:nextID
-                                                                                                 forTimeRange:inbetweenTimeRange];
-        instructionPassthrough = [[RSFrameInterpolatorPassthroughInstruction alloc] initWithPassthroughTrackID:nextID
-                                                                                                  forTimeRange:passthroughTimeRangeNext];
+            // Handle first frame special
+            if (framePrior == 0)
+            {
+                [instructions addObject:[[RSFrameInterpolatorPassthroughInstruction alloc] initWithPassthroughTrackID:priorID
+                                                                                                         forTimeRange:timeRangePrior]];
+            }
 
-        [instructions addObject:instructionInbetween];
-        [instructions addObject:instructionPassthrough];
-
-        CMTimeRangeShow(inbetweenTimeRange);
-        CMTimeRangeShow(passthroughTimeRangeNext);
+            [instructions addObject:[[RSFrameInterpolatorInterpolationInstruction alloc] initWithPriorFrameTrackID:priorID
+                                                                                               andNextFrameTrackID:nextID
+                                                                                                      forTimeRange:timeRangeInbetween]];
+            [instructions addObject:[[RSFrameInterpolatorPassthroughInstruction alloc] initWithPassthroughTrackID:nextID
+                                                                                                     forTimeRange:timeRangeNext]];
+        }
     }
 
 
