@@ -7,7 +7,9 @@
 //
 
 #import <Foundation/Foundation.h>
+#import "RSFrameInterpolator.h"
+#import <Accelerate/Accelerate.h>
 
-@interface RSFrameInterpolatorDefaultCompositor : NSObject
+@interface RSFrameInterpolatorDefaultCompositor : NSObject <RSFrameInterpolatorCompositor>
 
 @end
