@@ -29,7 +29,7 @@
 -(void)startVideoCompositionRequest:(AVAsynchronousVideoCompositionRequest *)asyncVideoCompositionRequest {
     @autoreleasepool {
         dispatch_async(_renderingQueue, ^{
-            id currentInstruction = asyncVideoCompositionRequest.videoCompositionInstruction;
+            RSFrameInterpolatorInterpolationInstruction *currentInstruction = asyncVideoCompositionRequest.videoCompositionInstruction;
             if (![currentInstruction isKindOfClass:[RSFrameInterpolatorInterpolationInstruction class]])
             {
                 [asyncVideoCompositionRequest finishWithError:[NSError errorWithDomain:@"me.rsullivan.apps.interframe" code:0 userInfo:nil]];
@@ -42,9 +42,21 @@
             CVPixelBufferRef inbetweenPixelBuffer = [renderContext newPixelBuffer];
 
 
-            // TODO
-            [asyncVideoCompositionRequest finishWithError:[NSError errorWithDomain:@"me.rsullivan.apps.interframe" code:1 userInfo:nil]];
+            // TODO: get rid of all context/cgimage stuff and work with bytes directly
+            CVImageBufferRef priorPixelBuffer = [asyncVideoCompositionRequest sourceFrameByTrackID:currentInstruction.priorID];
+            CVImageBufferRef nextPixelBuffer = [asyncVideoCompositionRequest sourceFrameByTrackID:currentInstruction.nextID];
+            CGImageRef priorImage = [[self class] newCGImageFromPixelBuffer:priorPixelBuffer];
+            CGImageRef nextImage = [[self class] newCGImageFromPixelBuffer:nextPixelBuffer];
+            CGImageRef inbetweenImage = [[self class] newInterpolatedImageWithPrior:priorImage
+                                                                            andNext:nextImage];
+            CGImageRelease(priorImage);
+            CGImageRelease(nextImage);
 
+            // Handles locks internally:
+            [[self class] fillPixelBuffer:inbetweenPixelBuffer withCGImage:inbetweenImage];
+
+
+            [asyncVideoCompositionRequest finishWithComposedVideoFrame:inbetweenPixelBuffer];
 
             // Cleanup
             CVPixelBufferRelease(inbetweenPixelBuffer);
@@ -70,13 +82,19 @@
     return self.requiredPixelBufferAttributesForRenderContext;
 }
 
+
+
 /**
  * Old image interpolator implementation
+ *
+ * This will be removed eventually
  */
 
-+(CGImageRef)newInterpolatedImageWithPrior:(CGImageRef)priorImage andNext:(CGImageRef)nextImage {
-    NSLog(@"-newInterpolatedImage");
+#define kRSFIBitmapInfo (kCGBitmapByteOrder32Little | kCGImageAlphaPremultipliedFirst)
+#define kRSFIPixelFormatType kCVPixelFormatType_32BGRA
 
+
++(CGImageRef)newInterpolatedImageWithPrior:(CGImageRef)priorImage andNext:(CGImageRef)nextImage {
     ANImageBitmapRep *prior = [[ANImageBitmapRep alloc] initWithCGImage:priorImage];
     ANImageBitmapRep *next = [[ANImageBitmapRep alloc] initWithCGImage:nextImage];
 
@@ -101,5 +119,61 @@
     [dest setNeedsUpdate:YES];
     return CGImageRetain(dest.CGImage);
 }
+
+/**
+ * Create a CGImage from a CVPixelBuffer
+ * This may only work on 32BGRA sources
+ *
+ * Some logic from: http://stackoverflow.com/questions/3305862/uiimage-created-from-cmsamplebufferref-not-displayed-in-uiimageview
+ */
++(CGImageRef)newCGImageFromPixelBuffer:(CVPixelBufferRef)pixelBuffer {
+    CVPixelBufferLockBaseAddress(pixelBuffer, 0);
+
+    CGContextRef context = [self newContextFromPixelBuffer:pixelBuffer];
+
+    // Fetch the image
+    CGImageRef image = CGBitmapContextCreateImage(context);
+
+    // Cleanup
+    CGContextRelease(context);
+    CVPixelBufferUnlockBaseAddress(pixelBuffer, 0);
+
+    return image;
+}
+/**
+ * Create a CVPixelBuffer from a CGImage
+ */
++(void)fillPixelBuffer:(CVPixelBufferRef)pixelBuffer withCGImage:(CGImageRef)image {
+    CVPixelBufferLockBaseAddress(pixelBuffer, 0);
+
+    CGContextRef context = [self newContextFromPixelBuffer:pixelBuffer];
+
+    // Draw the image onto pixelBuffer
+    CGContextDrawImage(context, CGRectMake(0, 0, CGImageGetWidth(image), CGImageGetHeight(image)), image);
+
+    CGContextRelease(context);
+    CVPixelBufferUnlockBaseAddress(pixelBuffer, 0);
+}
+/**
+ * Create a context from a given pixel buffer
+ */
++(CGContextRef)newContextFromPixelBuffer:(CVPixelBufferRef)pixelBuffer {
+    // Get info about image
+    void *baseAddress = CVPixelBufferGetBaseAddress(pixelBuffer);
+    size_t width = CVPixelBufferGetWidth(pixelBuffer);
+    size_t height = CVPixelBufferGetHeight(pixelBuffer);
+    size_t bytesPerRow = CVPixelBufferGetBytesPerRow(pixelBuffer);
+
+    // Using device RGB - is this best?
+    CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
+
+    CGContextRef context = CGBitmapContextCreate(baseAddress, width, height, 8, bytesPerRow, colorSpace, kRSFIBitmapInfo);
+
+    // Cleanup
+    CGColorSpaceRelease(colorSpace);
+
+    return context;
+}
+
 
 @end
