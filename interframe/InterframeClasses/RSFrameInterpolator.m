@@ -170,40 +170,38 @@
 
     CMTime startTime = priorStartTime;
 
-    // Handle all timeranges
+    // Handle prior:
     {
-        // Handle prior:
-        {
-            CMTimeRange passthroughTimeRangePrior = CMTimeRangeMake(startTime, frameDuration);
+        CMTimeRange passthroughTimeRangePrior = CMTimeRangeMake(startTime, frameDuration);
 
-            instructionPassthrough = [[RSFrameInterpolatorPassthroughInstruction alloc] initWithPassthroughTrackID:priorID
-                                                                                                      forTimeRange:passthroughTimeRangePrior];
+        instructionPassthrough = [[RSFrameInterpolatorPassthroughInstruction alloc] initWithPassthroughTrackID:priorID
+                                                                                                  forTimeRange:passthroughTimeRangePrior];
 
-            [instructions addObject:instructionPassthrough];
+        [instructions addObject:instructionPassthrough];
 
-            CMTimeRangeShow(passthroughTimeRangePrior);
-        }
-        for (NSUInteger frame = 2, i = 0; frame < self.outputFrameCount; frame += 2, i++)
-        {
-            startTime = CMTimeMakeWithSeconds((frame - 1) / self.outputFPS, kRSDurationResolution);
-            CMTimeRange inbetweenTimeRange = CMTimeRangeMake(CMTimeAdd(priorStartTime, startTime), frameDuration);
+        CMTimeRangeShow(passthroughTimeRangePrior);
+    }
+    // Then handle all inbetween+next:
+    for (NSUInteger frame = 2, i = 0; frame < self.outputFrameCount; frame += 2, i++)
+    {
+        startTime = CMTimeMakeWithSeconds((frame - 1) / self.outputFPS, kRSDurationResolution);
+        CMTimeRange inbetweenTimeRange = CMTimeRangeMake(CMTimeAdd(priorStartTime, startTime), frameDuration);
 
-            startTime = CMTimeMakeWithSeconds((frame) / self.outputFPS, kRSDurationResolution);
-            CMTimeRange passthroughTimeRangeNext = CMTimeRangeMake(CMTimeAdd(priorStartTime, startTime), frameDuration);
+        startTime = CMTimeMakeWithSeconds((frame) / self.outputFPS, kRSDurationResolution);
+        CMTimeRange passthroughTimeRangeNext = CMTimeRangeMake(CMTimeAdd(priorStartTime, startTime), frameDuration);
 
 
-            instructionInbetween = [[RSFrameInterpolatorInterpolationInstruction alloc] initWithPriorFrameTrackID:priorID
-                                                                                              andNextFrameTrackID:nextID
-                                                                                                     forTimeRange:inbetweenTimeRange];
-            instructionPassthrough = [[RSFrameInterpolatorPassthroughInstruction alloc] initWithPassthroughTrackID:nextID
-                                                                                                      forTimeRange:passthroughTimeRangeNext];
+        instructionInbetween = [[RSFrameInterpolatorInterpolationInstruction alloc] initWithPriorFrameTrackID:priorID
+                                                                                          andNextFrameTrackID:nextID
+                                                                                                 forTimeRange:inbetweenTimeRange];
+        instructionPassthrough = [[RSFrameInterpolatorPassthroughInstruction alloc] initWithPassthroughTrackID:nextID
+                                                                                                  forTimeRange:passthroughTimeRangeNext];
 
-            [instructions addObject:instructionInbetween];
-            [instructions addObject:instructionPassthrough];
+        [instructions addObject:instructionInbetween];
+        [instructions addObject:instructionPassthrough];
 
-            CMTimeRangeShow(inbetweenTimeRange);
-            CMTimeRangeShow(passthroughTimeRangeNext);
-        }
+        CMTimeRangeShow(inbetweenTimeRange);
+        CMTimeRangeShow(passthroughTimeRangeNext);
     }
 
 
