@@ -29,6 +29,7 @@
 		2B16EB5318F463D9000BA5AD /* BitmapRotationManipulator.m in Sources */ = {isa = PBXBuildFile; fileRef = 2B16EB4618F463D9000BA5AD /* BitmapRotationManipulator.m */; };
 		2B16EB5418F463D9000BA5AD /* BitmapScaleManipulator.m in Sources */ = {isa = PBXBuildFile; fileRef = 2B16EB4818F463D9000BA5AD /* BitmapScaleManipulator.m */; };
 		2B16EB5618F4A353000BA5AD /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2B16EB5518F4A353000BA5AD /* Accelerate.framework */; };
+		2B16EB5918F58248000BA5AD /* RSFrameInterpolatorPassthroughInstruction.m in Sources */ = {isa = PBXBuildFile; fileRef = 2B16EB5818F58248000BA5AD /* RSFrameInterpolatorPassthroughInstruction.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -84,6 +85,8 @@
 		2B16EB4718F463D9000BA5AD /* BitmapScaleManipulator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BitmapScaleManipulator.h; sourceTree = "<group>"; };
 		2B16EB4818F463D9000BA5AD /* BitmapScaleManipulator.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BitmapScaleManipulator.m; sourceTree = "<group>"; };
 		2B16EB5518F4A353000BA5AD /* Accelerate.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Accelerate.framework; path = System/Library/Frameworks/Accelerate.framework; sourceTree = SDKROOT; };
+		2B16EB5718F58248000BA5AD /* RSFrameInterpolatorPassthroughInstruction.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RSFrameInterpolatorPassthroughInstruction.h; path = InterframeClasses/RSFrameInterpolatorPassthroughInstruction.h; sourceTree = "<group>"; };
+		2B16EB5818F58248000BA5AD /* RSFrameInterpolatorPassthroughInstruction.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = RSFrameInterpolatorPassthroughInstruction.m; path = InterframeClasses/RSFrameInterpolatorPassthroughInstruction.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -156,6 +159,8 @@
 			children = (
 				2B16EB2018F339DC000BA5AD /* RSFrameInterpolator.h */,
 				2B16EB2118F339DC000BA5AD /* RSFrameInterpolator.m */,
+				2B16EB5718F58248000BA5AD /* RSFrameInterpolatorPassthroughInstruction.h */,
+				2B16EB5818F58248000BA5AD /* RSFrameInterpolatorPassthroughInstruction.m */,
 				2B16EB2318F34167000BA5AD /* RSFrameInterpolationState.h */,
 				2B16EB2418F34167000BA5AD /* RSFrameInterpolationState.m */,
 			);
@@ -293,6 +298,7 @@
 				2B16EB4918F463D9000BA5AD /* ANImageBitmapRep.m in Sources */,
 				2B16EB5218F463D9000BA5AD /* BitmapDrawManipulator.m in Sources */,
 				2B16EB2A18F45F27000BA5AD /* RSExampleInterpolator.m in Sources */,
+				2B16EB5918F58248000BA5AD /* RSFrameInterpolatorPassthroughInstruction.m in Sources */,
 				2B16EB1218F33888000BA5AD /* main.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
