@@ -11,7 +11,6 @@
 @interface RSFrameInterpolatorInterpolationInstruction ()
 
 @property (strong, nonatomic) NSArray *requiredSourceTrackIDs;
-@property (nonatomic) CMPersistentTrackID priorID, nextID;
 
 @end
 

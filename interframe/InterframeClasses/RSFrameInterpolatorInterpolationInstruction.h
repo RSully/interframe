@@ -15,4 +15,6 @@
            andNextFrameTrackID:(CMPersistentTrackID)nextID
                   forTimeRange:(CMTimeRange)timeRange;
 
+@property (nonatomic, readonly) CMPersistentTrackID priorID, nextID;
+
 @end
