@@ -28,6 +28,10 @@
 @property float outputFPS;
 @property NSUInteger outputFrameCount;
 
+// Export stuff
+@property (strong) NSURL *outputUrl;
+@property (strong) AVAssetExportSession *exportSession;
+
 @end
 
 
@@ -52,6 +56,7 @@
         self.outputVideoComposition = [AVMutableVideoComposition videoCompositionWithPropertiesOfAsset:self.inputAsset];
         self.outputVideoComposition.frameDuration = CMTimeMakeWithSeconds(1 / self.outputFPS, NSEC_PER_SEC);
 
+        self.outputUrl = output;
     }
     return self;
 }
@@ -195,6 +200,25 @@
 -(void)interpolate {
     [self buildComposition];
     NSLog(@"Built composition!");
+
+
+//    NSLog(@"%@", [AVAssetExportSession exportPresetsCompatibleWithAsset:self.outputComposition]);
+
+    self.exportSession = [[AVAssetExportSession alloc] initWithAsset:self.outputComposition
+                                                          presetName:AVAssetExportPresetAppleM4VWiFi];
+    self.exportSession.videoComposition = self.outputVideoComposition;
+
+    self.exportSession.outputFileType = CFBridgingRelease(UTTypeCreatePreferredIdentifierForTag(kUTTagClassFilenameExtension, (__bridge CFStringRef)self.outputUrl.pathExtension, NULL));
+    self.exportSession.outputURL = self.outputUrl;
+
+
+    [self.exportSession exportAsynchronouslyWithCompletionHandler:^{
+        NSLog(@"Exported!");
+        NSLog(@"%@", self.exportSession);
+        NSLog(@"%@", self.exportSession.error);
+
+        [self.delegate interpolatorFinished:self];
+    }];
 }
 
 @end
