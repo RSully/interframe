@@ -54,6 +54,7 @@
 
             // Handles locks internally:
             [[self class] fillPixelBuffer:inbetweenPixelBuffer withCGImage:inbetweenImage];
+            CGImageRelease(inbetweenImage);
 
 
             [asyncVideoCompositionRequest finishWithComposedVideoFrame:inbetweenPixelBuffer];
@@ -114,6 +115,9 @@
     float leftMatrix[] = {0.5f, 0.5f};
     vDSP_mmul(leftMatrix, 1, dspInput, 1, dspOutput, 1, 1, sampleCount, 2);
     vDSP_vfixu8(dspOutput, 1, dest.bitmapData, 1, sampleCount);
+
+    free(dspInput);
+    free(dspOutput);
 
     // return image
     [dest setNeedsUpdate:YES];
