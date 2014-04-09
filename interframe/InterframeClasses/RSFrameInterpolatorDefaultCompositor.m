@@ -8,19 +8,48 @@
 
 #import "RSFrameInterpolatorDefaultCompositor.h"
 #import "ANImageBitmapRep.h"
+#import "RSFrameInterpolatorInterpolationInstruction.h"
+#import "RSFrameInterpolatorPassthroughInstruction.h"
+
+@interface RSFrameInterpolatorDefaultCompositor () {
+    dispatch_queue_t _renderingQueue;
+}
+@end
 
 @implementation RSFrameInterpolatorDefaultCompositor
 
 -(id)init {
     if ((self = [super init]))
     {
-        // -
+        _renderingQueue = dispatch_queue_create("me.rsullivan.apps.interframe.renderingQueue", DISPATCH_QUEUE_SERIAL);
     }
     return self;
 }
 
 -(void)startVideoCompositionRequest:(AVAsynchronousVideoCompositionRequest *)asyncVideoCompositionRequest {
-    // Do magic here
+    @autoreleasepool {
+        dispatch_async(_renderingQueue, ^{
+            id currentInstruction = asyncVideoCompositionRequest.videoCompositionInstruction;
+            if (![currentInstruction isKindOfClass:[RSFrameInterpolatorInterpolationInstruction class]])
+            {
+                [asyncVideoCompositionRequest finishWithError:[NSError errorWithDomain:@"me.rsullivan.apps.interframe" code:0 userInfo:nil]];
+                return;
+            }
+
+            NSLog(@"Rendering interpolation frame");
+
+            AVVideoCompositionRenderContext *renderContext = asyncVideoCompositionRequest.renderContext;
+            CVPixelBufferRef inbetweenPixelBuffer = [renderContext newPixelBuffer];
+
+
+            // TODO
+            [asyncVideoCompositionRequest finishWithError:[NSError errorWithDomain:@"me.rsullivan.apps.interframe" code:1 userInfo:nil]];
+
+
+            // Cleanup
+            CVPixelBufferRelease(inbetweenPixelBuffer);
+        });
+    }
 }
 
 -(void)renderContextChanged:(AVVideoCompositionRenderContext *)newRenderContext {
