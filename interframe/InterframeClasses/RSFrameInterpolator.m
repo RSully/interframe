@@ -61,7 +61,7 @@
 }
 
 
--(void)interpolate {
+-(void)buildComposition {
     CMTime frameDuration = self.outputVideoComposition.frameDuration;
 
     /*
@@ -76,7 +76,7 @@
     {
         AVMutableCompositionTrack *outputTrack = [self.outputComposition addMutableTrackWithMediaType:inputTrack.mediaType preferredTrackID:inputTrack.trackID];
 
-        if (inputTrack.mediaType == AVMediaTypeVideo)
+        if ([inputTrack.mediaType isEqualToString:AVMediaTypeVideo])
         {
             [inputVideoTracks addObject:inputTrack];
             continue;
@@ -187,6 +187,14 @@
             [instructions addObject:instructionNext];
         }
     }
+
+    // Add the instructions
+    self.outputVideoComposition.instructions = instructions;
+}
+
+-(void)interpolate {
+    [self buildComposition];
+    NSLog(@"Built composition!");
 }
 
 @end
