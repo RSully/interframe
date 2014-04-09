@@ -8,8 +8,9 @@
 
 #import <Foundation/Foundation.h>
 #import <AVFoundation/AVFoundation.h>
+#import "RSFrameInterpolatorBaseInstruction.h"
 
-@interface RSFrameInterpolatorPassthroughInstruction : NSObject <AVVideoCompositionInstruction>
+@interface RSFrameInterpolatorPassthroughInstruction : RSFrameInterpolatorBaseInstruction
 
 -(id)initWithPassthroughTrackID:(CMPersistentTrackID)track forTimeRange:(CMTimeRange)timeRange;
 

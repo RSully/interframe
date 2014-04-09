@@ -31,12 +31,4 @@
     return @[@(self.passthroughTrackID)];
 }
 
--(BOOL)enablePostProcessing {
-    return NO;
-}
-
--(BOOL)containsTweening {
-    return NO;
-}
-
 @end

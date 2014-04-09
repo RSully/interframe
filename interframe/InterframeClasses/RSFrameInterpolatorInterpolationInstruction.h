@@ -8,8 +8,9 @@
 
 #import <Foundation/Foundation.h>
 #import <AVFoundation/AVFoundation.h>
+#import "RSFrameInterpolatorBaseInstruction.h"
 
-@interface RSFrameInterpolatorInterpolationInstruction : NSObject <AVVideoCompositionInstruction>
+@interface RSFrameInterpolatorInterpolationInstruction : RSFrameInterpolatorBaseInstruction
 
 -(id)initWithPriorFrameTrackID:(CMPersistentTrackID)priorID
            andNextFrameTrackID:(CMPersistentTrackID)nextID

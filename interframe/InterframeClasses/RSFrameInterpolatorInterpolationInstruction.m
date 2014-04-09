@@ -8,12 +8,6 @@
 
 #import "RSFrameInterpolatorInterpolationInstruction.h"
 
-@interface RSFrameInterpolatorInterpolationInstruction ()
-
-@property (strong, nonatomic) NSArray *requiredSourceTrackIDs;
-
-@end
-
 
 @implementation RSFrameInterpolatorInterpolationInstruction
 
@@ -41,14 +35,6 @@
 
 -(CMPersistentTrackID)passthroughTrackID {
     return kCMPersistentTrackID_Invalid;
-}
-
--(BOOL)containsTweening {
-    return NO;
-}
-
--(BOOL)enablePostProcessing {
-    return NO;
 }
 
 @end
