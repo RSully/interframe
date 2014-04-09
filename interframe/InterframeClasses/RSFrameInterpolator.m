@@ -56,7 +56,7 @@
         self.inputFrameCount = round(self.inputFPS * inputDuration);
 
         // Calculate expected output metadata
-        self.outputFrameCount = (self.inputFrameCount * 2.0) - 1;
+        self.outputFrameCount = (self.inputFrameCount * 2) - 1;
         self.outputFPS = self.outputFrameCount / inputDuration;
         self.outputFrameDuration = CMTimeMakeWithSeconds(1.0 / self.outputFPS, kRSDurationResolution);
 
@@ -66,8 +66,9 @@
 //        self.outputVideoComposition.renderSize = self.inputAssetVideoTrack.naturalSize;
         self.outputVideoComposition.frameDuration = self.outputFrameDuration;
 
-        NSLog(@"Input of %f seconds:", inputDuration);
+        NSLog(@"Input of %f seconds, %ld frames, %f fps", (self.inputFrameCount / self.inputFPS), self.inputFrameCount, self.inputFPS);
         CMTimeRangeShow(self.inputAssetVideoTrack.timeRange);
+        NSLog(@"Output of %f seconds, %ld frames, %f fps", (self.outputFrameCount / self.outputFPS), self.outputFrameCount, self.outputFPS);
     }
     return self;
 }
@@ -162,14 +163,10 @@
      * Handle creating timeranges and instructions for output
      */
 
-    // Only 1 frame comes from prior
-    CMTimeRange *passthroughTimeRangesPrior = alloca(sizeof(CMTimeRange) * 1);
 
-    NSUInteger framesAfterPrior = self.inputFrameCount - 1;
-    // The rest of the source frames come from next
-    CMTimeRange *passthroughTimeRangesNext = alloca(sizeof(CMTimeRange) * (framesAfterPrior));
-    // Everything else from inbetween
-    CMTimeRange *inbetweenTimeRanges = alloca(sizeof(CMTimeRange) * (framesAfterPrior));
+    NSMutableArray *instructions = [NSMutableArray arrayWithCapacity:self.outputFrameCount];
+    RSFrameInterpolatorPassthroughInstruction *instructionPassthrough;
+    RSFrameInterpolatorInterpolationInstruction *instructionInbetween;
 
     CMTime startTime = priorStartTime;
 
@@ -177,19 +174,30 @@
     {
         // Handle prior:
         {
-            passthroughTimeRangesPrior[0] = CMTimeRangeMake(startTime, frameDuration);
-            CMTimeRangeShow(passthroughTimeRangesPrior[0]);
+            CMTimeRange passthroughTimeRangePrior = CMTimeRangeMake(startTime, frameDuration);
+            CMTimeRangeShow(passthroughTimeRangePrior);
+
+            instructionPassthrough = [[RSFrameInterpolatorPassthroughInstruction alloc] initWithPassthroughTrackID:priorID forTimeRange:passthroughTimeRangePrior];
+
+            [instructions addObject:instructionPassthrough];
         }
         for (NSUInteger frame = 2, i = 0; frame < self.outputFrameCount; frame += 2, i++)
         {
             startTime = CMTimeMakeWithSeconds((frame - 1) / self.outputFPS, kRSDurationResolution);
-            inbetweenTimeRanges[i] = CMTimeRangeMake(CMTimeAdd(priorStartTime, startTime), frameDuration);
+            CMTimeRange inbetweenTimeRange = CMTimeRangeMake(CMTimeAdd(priorStartTime, startTime), frameDuration);
 
             startTime = CMTimeMakeWithSeconds((frame) / self.outputFPS, kRSDurationResolution);
-            passthroughTimeRangesNext[i] = CMTimeRangeMake(CMTimeAdd(priorStartTime, startTime), frameDuration);
+            CMTimeRange passthroughTimeRangeNext = CMTimeRangeMake(CMTimeAdd(priorStartTime, startTime), frameDuration);
 
-            CMTimeRangeShow(inbetweenTimeRanges[i]);
-            CMTimeRangeShow(passthroughTimeRangesNext[i]);
+
+            instructionInbetween = [[RSFrameInterpolatorInterpolationInstruction alloc] initWithPriorFrameTrackID:priorID andNextFrameTrackID:nextID forTimeRange:inbetweenTimeRange];
+            instructionPassthrough = [[RSFrameInterpolatorPassthroughInstruction alloc] initWithPassthroughTrackID:nextID forTimeRange:passthroughTimeRangeNext];
+
+            [instructions addObject:instructionInbetween];
+            [instructions addObject:instructionPassthrough];
+
+            CMTimeRangeShow(inbetweenTimeRange);
+            CMTimeRangeShow(passthroughTimeRangeNext);
         }
     }
 
@@ -197,35 +205,6 @@
 //    RSFrameInterpolatorPassthroughInstruction *ins = [[RSFrameInterpolatorPassthroughInstruction alloc] initWithPassthroughTrackID:priorID forTimeRange:inputVideoTrack.timeRange];
 //    self.outputVideoComposition.instructions = @[ins];
 //    return;
-
-    NSMutableArray *instructions = [NSMutableArray arrayWithCapacity:self.outputFrameCount];
-    RSFrameInterpolatorPassthroughInstruction *instructionPassthrough;
-    RSFrameInterpolatorInterpolationInstruction *instructionInbetween;
-
-    // Handle all instructions
-    {
-        // Handle prior
-        {
-            instructionPassthrough = [[RSFrameInterpolatorPassthroughInstruction alloc] initWithPassthroughTrackID:priorID forTimeRange:passthroughTimeRangesPrior[0]];
-
-            [instructions addObject:instructionPassthrough];
-
-//            NSLog(@"%@", instructionPassthrough);
-        }
-
-        for (NSUInteger frame = 2, i = 0; frame < self.outputFrameCount; frame += 2, i++)
-        {
-            instructionInbetween = [[RSFrameInterpolatorInterpolationInstruction alloc] initWithPriorFrameTrackID:priorID andNextFrameTrackID:nextID forTimeRange:inbetweenTimeRanges[i]];
-            instructionPassthrough = [[RSFrameInterpolatorPassthroughInstruction alloc] initWithPassthroughTrackID:nextID forTimeRange:passthroughTimeRangesNext[i]];
-
-            [instructions addObject:instructionInbetween];
-            if (frame + 2 < self.outputFrameCount)
-                [instructions addObject:instructionPassthrough];
-
-//            NSLog(@"%@", instructionInbetween);
-//            NSLog(@"%@", instructionPassthrough);
-        }
-    }
 
     // Add the instructions
     self.outputVideoComposition.instructions = instructions;
