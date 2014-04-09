@@ -7,7 +7,8 @@
 //
 
 #import "RSFrameInterpolator.h"
-
+#import "RSFrameInterpolatorPassthroughInstruction.h"
+#import "RSFrameInterpolatorInterpolationInstruction.h"
 
 @interface RSFrameInterpolator ()
 
@@ -35,8 +36,6 @@
 -(id)initWithAsset:(AVAsset *)asset output:(NSURL *)output {
     if ((self = [self init]))
     {
-        NSError *error = nil;
-
         self.inputAsset = asset;
 
         // Setup input metadata
@@ -63,7 +62,131 @@
 
 
 -(void)interpolate {
+    CMTime frameDuration = self.outputVideoComposition.frameDuration;
 
+    /*
+     * Handle prepping composition
+     */
+
+    NSMutableArray *inputVideoTracks = [NSMutableArray array];
+
+    NSLog(@"Copying non-video tracks to outputComposition");
+    // Copy any tracks that aren't video
+    for (AVAssetTrack *inputTrack in self.inputAsset.tracks)
+    {
+        AVMutableCompositionTrack *outputTrack = [self.outputComposition addMutableTrackWithMediaType:inputTrack.mediaType preferredTrackID:inputTrack.trackID];
+
+        if (inputTrack.mediaType == AVMediaTypeVideo)
+        {
+            [inputVideoTracks addObject:inputTrack];
+            continue;
+        }
+
+        NSError *err = nil;
+        [outputTrack insertTimeRange:inputTrack.timeRange
+                             ofTrack:inputTrack
+                              atTime:inputTrack.timeRange.start
+                               error:&err];
+        if (err)
+        {
+            NSLog(@"Failed to copy track %@ into output composition", inputTrack);
+        }
+    }
+
+    if (inputVideoTracks.count > 1)
+    {
+        // TODO: eventually we could handle any number of input video tracks
+        NSLog(@"*** Bailing, we have more than 1 input video track");
+        return;
+    }
+
+    AVCompositionTrack *inputVideoTrack = inputVideoTracks[0];
+
+    NSError *err = nil;
+    AVMutableCompositionTrack *compositionVideoTracks[2];
+    compositionVideoTracks[0] = [self.outputComposition addMutableTrackWithMediaType:AVMediaTypeVideo
+                                                                    preferredTrackID:kCMPersistentTrackID_Invalid];
+    compositionVideoTracks[1] = [self.outputComposition addMutableTrackWithMediaType:AVMediaTypeVideo
+                                                                    preferredTrackID:kCMPersistentTrackID_Invalid];
+    CMPersistentTrackID priorID = compositionVideoTracks[0].trackID;
+    CMPersistentTrackID nextID = compositionVideoTracks[1].trackID;
+
+    CMTime priorStartTime = CMTimeMakeWithSeconds(0 / self.outputFPS, NSEC_PER_SEC);
+    CMTime nextStartTime = CMTimeMakeWithSeconds(1 / self.outputFPS, NSEC_PER_SEC);
+
+    [compositionVideoTracks[0] insertTimeRange:inputVideoTrack.timeRange
+                                       ofTrack:inputVideoTrack
+                                        atTime:priorStartTime
+                                         error:&err];
+    if (err)
+    {
+        NSLog(@"** Failed to insert prior video track into output composition");
+        return;
+    }
+    [compositionVideoTracks[1] insertTimeRange:inputVideoTrack.timeRange
+                                       ofTrack:inputVideoTrack
+                                        atTime:nextStartTime
+                                         error:&err];
+    if (err)
+    {
+        NSLog(@"** Failed to insert next video track into output composition");
+        return;
+    }
+
+    /*
+     * Handle creating timeranges and instructions for output
+     */
+
+    // Only 1 frame comes from prior
+    CMTimeRange *passthroughTimeRangesPrior = alloca(sizeof(CMTimeRange) * 1);
+    // The rest of the source frames come from next
+    CMTimeRange *passthroughTimeRangesNext = alloca(sizeof(CMTimeRange) * (self.inputFrameCount - 1));
+    // Everything else from inbetween
+    CMTimeRange *inbetweenTimeRanges = alloca(sizeof(CMTimeRange) * (self.outputFrameCount - self.inputFrameCount));
+
+    // Handle all timeranges
+    {
+        // Handle prior:
+        {
+            NSUInteger framePrior = 0;
+            CMTime timePrior = CMTimeMakeWithSeconds(framePrior / self.outputFPS, NSEC_PER_SEC);
+            passthroughTimeRangesPrior[0] = CMTimeRangeMake(timePrior, frameDuration);
+
+        }
+        for (NSUInteger frame = 2, i = 0; frame < self.outputFrameCount; frame += 2, i++)
+        {
+            NSUInteger frameInbetween = frame - 1;
+            NSUInteger frameNext = frame;
+
+            CMTime timeInbetween = CMTimeMakeWithSeconds(frameInbetween / self.outputFPS, NSEC_PER_SEC);
+            CMTime timeNext = CMTimeMakeWithSeconds(frameNext / self.outputFPS, NSEC_PER_SEC);
+
+            inbetweenTimeRanges[i] = CMTimeRangeMake(timeInbetween, frameDuration);
+            passthroughTimeRangesNext[i] = CMTimeRangeMake(timeNext, frameDuration);
+        }
+    }
+
+    NSMutableArray *instructions = [NSMutableArray arrayWithCapacity:self.outputFrameCount];
+    RSFrameInterpolatorPassthroughInstruction *instructionPrior, *instructionNext;
+    RSFrameInterpolatorInterpolationInstruction *instructionInbetween;
+
+    // Handle all instructions
+    {
+        // Handle prior
+        {
+            instructionPrior = [[RSFrameInterpolatorPassthroughInstruction alloc] initWithPassthroughTrackID:priorID forTimeRange:passthroughTimeRangesPrior[0]];
+            [instructions addObject:instructionPrior];
+        }
+
+        for (NSUInteger frame = 2, i = 0; frame < self.outputFrameCount; frame += 2, i++)
+        {
+            instructionInbetween = [[RSFrameInterpolatorInterpolationInstruction alloc] initWithPriorFrameTrackID:priorID andNextFrameTrackID:nextID forTimeRange:inbetweenTimeRanges[i]];
+            instructionNext = [[RSFrameInterpolatorPassthroughInstruction alloc] initWithPassthroughTrackID:nextID forTimeRange:passthroughTimeRangesNext[i]];
+
+            [instructions addObject:instructionInbetween];
+            [instructions addObject:instructionNext];
+        }
+    }
 }
 
 @end
