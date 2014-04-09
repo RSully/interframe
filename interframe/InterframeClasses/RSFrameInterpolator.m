@@ -16,71 +16,30 @@
 
 @interface RSFrameInterpolator ()
 
-@property (strong) NSMutableDictionary *defaultPixelSettings;
-
-// Input assets
 @property (strong) AVAsset *inputAsset;
-@property (strong) AVAssetTrack *inputAssetVideoTrack;
-// Input metadata
-@property float inputFPS;
-@property NSUInteger inputFrameCount;
-
-// Output composition
-@property (strong) AVMutableComposition *outputComposition;
-@property (strong) AVMutableVideoComposition *outputVideoComposition;
-// Output metadata
-@property CMTime outputFrameDuration;
-@property float outputFPS;
-@property NSUInteger outputFrameCount;
-
-// Export stuff
 @property (strong) NSURL *outputUrl;
 @property (strong) AVAssetExportSession *exportSession;
+@property Class<RSFrameInterpolatorCompositor> compositor;
 
 @end
 
 
 @implementation RSFrameInterpolator
 
--(id)initWithAsset:(AVAsset *)asset output:(NSURL *)output {
+-(id)initWithAsset:(AVAsset *)asset output:(NSURL *)output compositor:(Class<RSFrameInterpolatorCompositor>)compositor {
     if ((self = [self init]))
     {
         self.inputAsset = asset;
         self.outputUrl = output;
-
-
-        // Setup input metadata
-        self.inputAssetVideoTrack = [self.inputAsset tracksWithMediaType:AVMediaTypeVideo][0];
-        Float64 inputDuration = CMTimeGetSeconds(self.inputAssetVideoTrack.timeRange.duration);
-        self.inputFPS = self.inputAssetVideoTrack.nominalFrameRate;
-        self.inputFrameCount = round(self.inputFPS * inputDuration);
-
-        // Calculate expected output metadata
-        self.outputFrameCount = (self.inputFrameCount * 2) - 1;
-        self.outputFPS = self.outputFrameCount / inputDuration;
-        self.outputFrameDuration = CMTimeMakeWithSeconds(1.0 / self.outputFPS, kRSDurationResolution);
-
-
-        self.outputComposition = [AVMutableComposition composition];
-        self.outputVideoComposition = [AVMutableVideoComposition videoCompositionWithPropertiesOfAsset:self.inputAsset];
-//        self.outputVideoComposition.renderSize = self.inputAssetVideoTrack.naturalSize;
-        self.outputVideoComposition.frameDuration = self.outputFrameDuration;
-
-        NSLog(@"Input of %f seconds, %ld frames, %f fps", (self.inputFrameCount / self.inputFPS), self.inputFrameCount, self.inputFPS);
-        CMTimeRangeShow(self.inputAssetVideoTrack.timeRange);
-        NSLog(@"Output of %f seconds, %ld frames, %f fps", (self.outputFrameCount / self.outputFPS), self.outputFrameCount, self.outputFPS);
+        self.compositor = compositor;
     }
     return self;
 }
 
--(void)setCompositor:(Class<RSFrameInterpolatorCompositor>)compositor {
-    NSLog(@"-setCompositor");
-    self.outputVideoComposition.customVideoCompositorClass = compositor;
-}
 
+-(AVMutableComposition *)buildComposition {
 
--(void)buildComposition {
-    CMTime frameDuration = self.outputFrameDuration;
+    AVMutableComposition *outputComposition = [AVMutableComposition composition];
 
     /*
      * Handle prepping composition
@@ -98,7 +57,7 @@
             continue;
         }
 
-        AVMutableCompositionTrack *outputTrack = [self.outputComposition addMutableTrackWithMediaType:inputTrack.mediaType preferredTrackID:inputTrack.trackID];
+        AVMutableCompositionTrack *outputTrack = [outputComposition addMutableTrackWithMediaType:inputTrack.mediaType preferredTrackID:inputTrack.trackID];
 
         NSError *err = nil;
         [outputTrack insertTimeRange:inputTrack.timeRange
@@ -111,41 +70,78 @@
         }
     }
 
-    if (inputVideoTracks.count > 1)
-    {
-        // TODO: eventually we could handle any number of input video tracks
-        NSLog(@"*** Bailing, we have more than 1 input video track");
-        return;
-    }
+    return outputComposition;
+}
+-(AVMutableVideoComposition *)buildVideoCompositionForComposition:(AVMutableComposition*)composition
+                                                    andVideoTrack:(AVAssetTrack *)inputVideoTrack {
 
-    AVCompositionTrack *inputVideoTrack = inputVideoTracks[0];
+    /**
+     * Metadata
+     */
+
+    // Calculate input metadata
+    float inputDuration = CMTimeGetSeconds(inputVideoTrack.timeRange.duration);
+    float inputFPS = inputVideoTrack.nominalFrameRate;
+    NSUInteger inputFrameCount = round(inputFPS * inputDuration);
+
+    // Calculate expected output metadata
+    NSUInteger outputFrameCount = (inputFrameCount * 2) - 1;
+//    float outputFPS = self.outputFrameCount / inputDuration;
+    float outputFPS = inputFPS * 2.0;
+    CMTime outputFrameDuration = CMTimeMakeWithSeconds(1.0 / outputFPS, kRSDurationResolution);
+
+
+    /**
+     * Video composition
+     */
+
+    AVMutableVideoComposition *outputVideoComposition = [AVMutableVideoComposition videoCompositionWithPropertiesOfAsset:inputVideoTrack.asset];
+    outputVideoComposition.frameDuration = outputFrameDuration;
+
+    /**
+     * Create video tracks
+     */
 
     NSError *err = nil;
     AVMutableCompositionTrack *compositionVideoTrackPrior, *compositionVideoTrackNext;
-    compositionVideoTrackPrior = [self.outputComposition addMutableTrackWithMediaType:AVMediaTypeVideo
-                                                                     preferredTrackID:kCMPersistentTrackID_Invalid];
-    compositionVideoTrackNext = [self.outputComposition addMutableTrackWithMediaType:AVMediaTypeVideo
-                                                                    preferredTrackID:kCMPersistentTrackID_Invalid];
+
+    compositionVideoTrackPrior = [composition addMutableTrackWithMediaType:AVMediaTypeVideo
+                                                          preferredTrackID:kCMPersistentTrackID_Invalid];
+    compositionVideoTrackNext = [composition addMutableTrackWithMediaType:AVMediaTypeVideo
+                                                         preferredTrackID:kCMPersistentTrackID_Invalid];
+
     CMPersistentTrackID priorID = compositionVideoTrackPrior.trackID;
     CMPersistentTrackID nextID = compositionVideoTrackNext.trackID;
 
-//    CMTime priorStartTime = inputVideoTrack.timeRange.start;
-//    CMTime nextStartTime = CMTimeAdd(priorStartTime, frameDuration);
-    CMTimeRange priorTimeRange = CMTimeRangeMake(inputVideoTrack.timeRange.start, inputVideoTrack.timeRange.duration);
-    CMTime priorEndTime = CMTimeAdd(priorTimeRange.start, inputVideoTrack.timeRange.duration);
-    CMTimeRange nextTimeRange = CMTimeRangeMake(CMTimeAdd(priorTimeRange.start, frameDuration), inputVideoTrack.timeRange.duration);
+    CMTimeRange priorTimeRange = inputVideoTrack.timeRange;
+    CMTime priorEndTime = CMTimeAdd(priorTimeRange.start, priorTimeRange.duration);
+    CMTimeRange nextTimeRange = CMTimeRangeMake(CMTimeAdd(priorTimeRange.start, outputFrameDuration), inputVideoTrack.timeRange.duration);
+
+    // Convert to "big" scale
+    priorTimeRange.start = CMTimeConvertScale(priorTimeRange.start, kRSDurationResolution, kCMTimeRoundingMethod_Default);
+    priorTimeRange.duration = CMTimeConvertScale(priorTimeRange.duration, kRSDurationResolution, kCMTimeRoundingMethod_Default);
+    nextTimeRange.start = CMTimeConvertScale(nextTimeRange.start, kRSDurationResolution, kCMTimeRoundingMethod_Default);
+    nextTimeRange.duration = CMTimeConvertScale(nextTimeRange.duration, kRSDurationResolution, kCMTimeRoundingMethod_Default);
+
+    NSLog(@"DEBUG:");
+    CMTimeShow(outputFrameDuration);
+    CMTimeRangeShow(priorTimeRange);
+    CMTimeRangeShow(inputVideoTrack.timeRange);
+    CMTimeShow(priorEndTime);
+    CMTimeRangeShow(nextTimeRange);
 
     [compositionVideoTrackPrior insertTimeRange:inputVideoTrack.timeRange
                                         ofTrack:inputVideoTrack
                                          atTime:priorTimeRange.start
                                           error:&err];
-    [compositionVideoTrackPrior insertEmptyTimeRange:CMTimeRangeMake(priorEndTime, frameDuration)];
+    [compositionVideoTrackPrior insertEmptyTimeRange:CMTimeRangeMake(priorEndTime, outputFrameDuration)];
     if (err)
     {
         NSLog(@"** Failed to insert prior video track into output composition: %@", err);
-        return;
+        return nil;
     }
-    [compositionVideoTrackNext insertEmptyTimeRange:CMTimeRangeMake(priorTimeRange.start, frameDuration)];
+
+    [compositionVideoTrackNext insertEmptyTimeRange:CMTimeRangeMake(priorTimeRange.start, outputFrameDuration)];
     [compositionVideoTrackNext insertTimeRange:inputVideoTrack.timeRange
                                        ofTrack:inputVideoTrack
                                         atTime:nextTimeRange.start
@@ -153,38 +149,50 @@
     if (err)
     {
         NSLog(@"** Failed to insert next video track into output composition: %@", err);
-        return;
+        return nil;
     }
 
-    NSLog(@"prior: %d, next: %d", priorID, nextID);
 
+    NSLog(@"INS TEST:");
+    CMTimeRange insAtr = CMTimeRangeMake(priorTimeRange.start, CMTimeSubtract(priorTimeRange.duration, outputFrameDuration));
+    CMTimeRange insBtr = CMTimeRangeMake(CMTimeSubtract(priorEndTime, outputFrameDuration), outputFrameDuration);
+    CMTimeRange insCtr = CMTimeRangeMake(priorEndTime, outputFrameDuration);
+    CMTimeRangeShow(insAtr);
+    CMTimeRangeShow(insBtr);
+    CMTimeRangeShow(insCtr);
+
+    RSFrameInterpolatorPassthroughInstruction *insA = [[RSFrameInterpolatorPassthroughInstruction alloc] initWithPassthroughTrackID:priorID forTimeRange:insAtr];
+    RSFrameInterpolatorInterpolationInstruction *insB = [[RSFrameInterpolatorInterpolationInstruction alloc] initWithPriorFrameTrackID:priorID andNextFrameTrackID:nextID forTimeRange:insBtr];
+    RSFrameInterpolatorPassthroughInstruction *insC = [[RSFrameInterpolatorPassthroughInstruction alloc] initWithPassthroughTrackID:nextID forTimeRange:insCtr];
+    outputVideoComposition.instructions = @[insA, insB, insC];
+    return outputVideoComposition;
 
     /*
      * Handle creating timeranges and instructions for output
      */
 
 
-    NSMutableArray *instructions = [NSMutableArray arrayWithCapacity:self.outputFrameCount];
+    NSMutableArray *instructions = [NSMutableArray arrayWithCapacity:outputFrameCount];
 
     NSUInteger framePrior, frameInbetween, frameNext;
     CMTime timePrior, timeInbetween, timeNext;
     CMTimeRange timeRangePrior, timeRangeInbetween, timeRangeNext;
 
     // Then handle all inbetween+next:
-    for (NSUInteger frame = 2; frame < self.outputFrameCount; frame += 2)
+    for (NSUInteger frame = 2; frame < outputFrameCount; frame += 2)
     {
         @autoreleasepool {
             framePrior = frame - 2;
             frameInbetween = frame - 1;
             frameNext = frame;
 
-            timePrior = CMTimeAdd(priorTimeRange.start, CMTimeMakeWithSeconds(framePrior / self.outputFPS, kRSDurationResolution));
-            timeInbetween = CMTimeAdd(priorTimeRange.start, CMTimeMakeWithSeconds(frameInbetween / self.outputFPS, kRSDurationResolution));
-            timeNext = CMTimeAdd(priorTimeRange.start, CMTimeMakeWithSeconds(frameNext / self.outputFPS, kRSDurationResolution));
+            timePrior = CMTimeAdd(priorTimeRange.start, CMTimeMakeWithSeconds(framePrior / outputFPS, kRSDurationResolution));
+            timeInbetween = CMTimeAdd(priorTimeRange.start, CMTimeMakeWithSeconds(frameInbetween / outputFPS, kRSDurationResolution));
+            timeNext = CMTimeAdd(priorTimeRange.start, CMTimeMakeWithSeconds(frameNext / outputFPS, kRSDurationResolution));
 
-            timeRangePrior = CMTimeRangeMake(timePrior, frameDuration);
-            timeRangeInbetween = CMTimeRangeMake(timeInbetween, frameDuration);
-            timeRangeNext = CMTimeRangeMake(timeNext, frameDuration);
+            timeRangePrior = CMTimeRangeMake(timePrior, outputFrameDuration);
+            timeRangeInbetween = CMTimeRangeMake(timeInbetween, outputFrameDuration);
+            timeRangeNext = CMTimeRangeMake(timeNext, outputFrameDuration);
 
             // Handle first frame special
             if (framePrior == 0)
@@ -201,26 +209,28 @@
         }
     }
 
-
-//    RSFrameInterpolatorPassthroughInstruction *insA = [[RSFrameInterpolatorPassthroughInstruction alloc] initWithPassthroughTrackID:priorID forTimeRange:priorTimeRange];
-//    RSFrameInterpolatorPassthroughInstruction *insB = [[RSFrameInterpolatorPassthroughInstruction alloc] initWithPassthroughTrackID:nextID forTimeRange:CMTimeRangeMake(priorEndTime, frameDuration)];
-//    self.outputVideoComposition.instructions = @[insA, insB];
-//    return;
-
-    // Add the instructions
-    self.outputVideoComposition.instructions = instructions;
+//    // Add the instructions
+//    outputVideoComposition.instructions = instructions;
+//
+//    return outputVideoComposition;
 }
 
 -(void)interpolate {
-    [self buildComposition];
+
+    AVAssetTrack *videoTrack = [self.inputAsset tracksWithMediaType:AVMediaTypeVideo][0];
+
+    AVMutableComposition *outputComposition = [self buildComposition];
+    AVMutableVideoComposition *outputVideoComposition = [self buildVideoCompositionForComposition:outputComposition
+                                                                                    andVideoTrack:videoTrack];
+
     NSLog(@"Built composition!");
 
 
 //    NSLog(@"%@", [AVAssetExportSession exportPresetsCompatibleWithAsset:self.outputComposition]);
 
-    self.exportSession = [[AVAssetExportSession alloc] initWithAsset:self.outputComposition
+    self.exportSession = [[AVAssetExportSession alloc] initWithAsset:outputComposition
                                                           presetName:AVAssetExportPresetAppleM4VWiFi];
-    self.exportSession.videoComposition = self.outputVideoComposition;
+    self.exportSession.videoComposition = outputVideoComposition;
 
     self.exportSession.outputFileType = CFBridgingRelease(UTTypeCreatePreferredIdentifierForTag(kUTTagClassFilenameExtension, (__bridge CFStringRef)self.outputUrl.pathExtension, NULL));
     self.exportSession.outputURL = self.outputUrl;
@@ -228,7 +238,7 @@
 
     [self.exportSession exportAsynchronouslyWithCompletionHandler:^{
         NSLog(@"Export completion, %ld", self.exportSession.status);
-        NSLog(@"%@, %@", self.exportSession, self.outputVideoComposition);
+        NSLog(@"%@, %@", self.exportSession, outputVideoComposition);
         switch (self.exportSession.status)
         {
             case AVAssetExportSessionStatusCancelled:

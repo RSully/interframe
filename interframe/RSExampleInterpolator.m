@@ -22,9 +22,8 @@
 -(id)initWithAsset:(AVAsset *)asset output:(NSURL *)output {
     if ((self = [super init]))
     {
-        self.interpolator = [[RSFrameInterpolator alloc] initWithAsset:asset output:output];
+        self.interpolator = [[RSFrameInterpolator alloc] initWithAsset:asset output:output compositor:[RSFrameInterpolatorDefaultCompositor class]];
         self.interpolator.delegate = self;
-        self.interpolator.compositor = [RSFrameInterpolatorDefaultCompositor class];
     }
     return self;
 }

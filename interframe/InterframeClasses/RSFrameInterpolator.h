@@ -22,7 +22,7 @@
 
 @interface RSFrameInterpolator : NSObject
 
--(id)initWithAsset:(AVAsset *)asset output:(NSURL *)output;
+-(id)initWithAsset:(AVAsset *)asset output:(NSURL *)output compositor:(Class<RSFrameInterpolatorCompositor>)compositor;
 
 
 -(void)interpolate;
