@@ -62,6 +62,7 @@
 }
 
 -(void)setCompositor:(Class<RSFrameInterpolatorCompositor>)compositor {
+    NSLog(@"Set compositor");
     self.outputVideoComposition.customVideoCompositorClass = compositor;
 }
 

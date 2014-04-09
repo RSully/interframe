@@ -21,17 +21,21 @@
 -(id)init {
     if ((self = [super init]))
     {
+        NSLog(@"-init compositor");
         _renderingQueue = dispatch_queue_create("me.rsullivan.apps.interframe.renderingQueue", DISPATCH_QUEUE_SERIAL);
     }
     return self;
 }
 
 -(void)startVideoCompositionRequest:(AVAsynchronousVideoCompositionRequest *)asyncVideoCompositionRequest {
+    NSLog(@"-startVideoCompositionRequest");
+
     @autoreleasepool {
         dispatch_async(_renderingQueue, ^{
             RSFrameInterpolatorInterpolationInstruction *currentInstruction = asyncVideoCompositionRequest.videoCompositionInstruction;
             if (![currentInstruction isKindOfClass:[RSFrameInterpolatorInterpolationInstruction class]])
             {
+                NSLog(@"Failed compositor because non-interpolation");
                 [asyncVideoCompositionRequest finishWithError:[NSError errorWithDomain:@"me.rsullivan.apps.interframe" code:0 userInfo:nil]];
                 return;
             }
@@ -66,6 +70,7 @@
 }
 
 -(void)renderContextChanged:(AVVideoCompositionRenderContext *)newRenderContext {
+    NSLog(@"-renderContextChanged");
     // Umm.
 }
 
@@ -74,13 +79,17 @@
  */
 
 -(NSDictionary *)requiredPixelBufferAttributesForRenderContext {
+    NSLog(@"-requiredPixelBufferAttributesForRenderContext");
     return @{
         (NSString *)kCVPixelBufferPixelFormatTypeKey: @[@(kCVPixelFormatType_32BGRA)]
     };
 }
 
 -(NSDictionary *)sourcePixelBufferAttributes {
-    return self.requiredPixelBufferAttributesForRenderContext;
+    NSLog(@"-sourcePixelBufferAttributes");
+    return @{
+        (NSString *)kCVPixelBufferPixelFormatTypeKey: @[@(kCVPixelFormatType_32BGRA)]
+    };
 }
 
 
