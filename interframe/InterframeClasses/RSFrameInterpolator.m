@@ -173,7 +173,7 @@
     CMTimeRange timeRangePrior, timeRangeInbetween, timeRangeNext;
 
     // Then handle all inbetween+next:
-    for (NSUInteger frame = 2, i = 0; frame < self.outputFrameCount; frame += 2, i++)
+    for (NSUInteger frame = 2; frame < self.outputFrameCount; frame += 2)
     {
         @autoreleasepool {
             framePrior = frame - 2;
