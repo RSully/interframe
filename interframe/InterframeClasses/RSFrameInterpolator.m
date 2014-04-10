@@ -120,10 +120,7 @@
     priorTimeRange.duration = CMTimeConvertScale(priorTimeRange.duration, kRSDurationResolution, kCMTimeRoundingMethod_Default);
 
     CMTime priorEndTime = CMTimeAdd(priorTimeRange.start, priorTimeRange.duration);
-
-    CMTimeRange nextTimeRange = CMTimeRangeMake(CMTimeAdd(priorTimeRange.start, outputFrameDuration), inputVideoTrack.timeRange.duration);
-    nextTimeRange.start = CMTimeConvertScale(nextTimeRange.start, kRSDurationResolution, kCMTimeRoundingMethod_Default);
-    nextTimeRange.duration = CMTimeConvertScale(nextTimeRange.duration, kRSDurationResolution, kCMTimeRoundingMethod_Default);
+    CMTimeRange nextTimeRange = CMTimeRangeMake(CMTimeAdd(priorTimeRange.start, outputFrameDuration), priorTimeRange.duration);
 
     NSLog(@"DEBUG:");
     CMTimeShow(outputFrameDuration);
@@ -156,9 +153,10 @@
 
 
     NSLog(@"INS TEST:");
-    CMTimeRange insAtr = CMTimeRangeMake(priorTimeRange.start, CMTimeSubtract(CMTimeSubtract(priorTimeRange.duration, outputFrameDuration), outputFrameDuration));
-    CMTimeRange insBtr = CMTimeRangeMake(CMTimeSubtract(CMTimeSubtract(priorEndTime, outputFrameDuration), outputFrameDuration), outputFrameDuration);
-    CMTimeRange insCtr = CMTimeRangeMake(CMTimeSubtract(priorEndTime, outputFrameDuration), CMTimeAdd(outputFrameDuration, outputFrameDuration));
+    CMTime peM2 = CMTimeSubtract(CMTimeSubtract(priorEndTime, outputFrameDuration), outputFrameDuration);
+    CMTimeRange insAtr = CMTimeRangeMake(priorTimeRange.start, peM2);
+    CMTimeRange insBtr = CMTimeRangeMake(peM2, CMTimeAdd(outputFrameDuration, outputFrameDuration));
+    CMTimeRange insCtr = CMTimeRangeMake(CMTimeAdd(peM2, CMTimeAdd(outputFrameDuration, outputFrameDuration)), outputFrameDuration);
     CMTimeRangeShow(insAtr);
     CMTimeRangeShow(insBtr);
     CMTimeRangeShow(insCtr);
