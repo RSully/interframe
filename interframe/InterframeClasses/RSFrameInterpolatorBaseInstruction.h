@@ -9,6 +9,6 @@
 #import <Foundation/Foundation.h>
 #import <AVFoundation/AVFoundation.h>
 
-@interface RSFrameInterpolatorBaseInstruction : NSObject <AVVideoCompositionInstruction>
+@interface RSFrameInterpolatorBaseInstruction : AVVideoCompositionInstruction <AVVideoCompositionInstruction>
 
 @end
