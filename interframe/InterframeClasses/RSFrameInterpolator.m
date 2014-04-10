@@ -87,8 +87,8 @@
 
     // Calculate expected output metadata
     NSUInteger outputFrameCount = (inputFrameCount * 2) - 1;
-//    float outputFPS = outputFrameCount / inputDuration;
-    float outputFPS = inputFPS * 2.0;
+    float outputFPS = outputFrameCount / inputDuration;
+//    float outputFPS = inputFPS * 2.0;
     CMTime outputFrameDuration = CMTimeMakeWithSeconds(1.0 / outputFPS, kRSDurationResolution);
 
 
@@ -134,14 +134,14 @@
                                         ofTrack:inputVideoTrack
                                          atTime:priorTimeRange.start
                                           error:&err];
-    [compositionVideoTrackPrior insertEmptyTimeRange:CMTimeRangeMake(priorEndTime, outputFrameDuration)];
+//    [compositionVideoTrackPrior insertEmptyTimeRange:CMTimeRangeMake(priorEndTime, outputFrameDuration)];
     if (err)
     {
         NSLog(@"** Failed to insert prior video track into output composition: %@", err);
         return nil;
     }
 
-    [compositionVideoTrackNext insertEmptyTimeRange:CMTimeRangeMake(priorTimeRange.start, outputFrameDuration)];
+//    [compositionVideoTrackNext insertEmptyTimeRange:CMTimeRangeMake(priorTimeRange.start, outputFrameDuration)];
     [compositionVideoTrackNext insertTimeRange:inputVideoTrack.timeRange
                                        ofTrack:inputVideoTrack
                                         atTime:nextTimeRange.start

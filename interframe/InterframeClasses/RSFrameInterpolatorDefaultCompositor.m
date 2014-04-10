@@ -79,6 +79,7 @@
 
 -(NSDictionary *)defaultPixelBufferAttributes {
     return @{
+             // kCVPixelFormatType_32BGRA, kCVPixelFormatType_420YpCbCr8BiPlanarFullRange
              (NSString *)kCVPixelBufferPixelFormatTypeKey: @[@(kCVPixelFormatType_32BGRA)],
 //             (NSString *)kCVPixelBufferCGBitmapContextCompatibilityKey: @(YES),
 //             (NSString *)kCVPixelBufferCGImageCompatibilityKey: @(YES),
@@ -110,8 +111,8 @@
 
     size_t dataSize = CVPixelBufferGetBytesPerRow(prior) * CVPixelBufferGetHeight(prior);
     void *baseAddress = CVPixelBufferGetBaseAddress(pixelBuffer);
-    void *priorBaseAddress = CVPixelBufferGetBaseAddress(pixelBuffer);
-    void *nextBaseAddress = CVPixelBufferGetBaseAddress(pixelBuffer);
+    void *priorBaseAddress = CVPixelBufferGetBaseAddress(prior);
+    void *nextBaseAddress = CVPixelBufferGetBaseAddress(next);
 
 
     float *dspInput = malloc(sizeof(float) * (2 * dataSize));
