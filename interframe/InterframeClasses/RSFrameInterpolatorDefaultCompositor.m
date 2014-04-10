@@ -118,7 +118,7 @@
 
 
 +(void)fillPixelBuffer:(CVPixelBufferRef)pixelBuffer byInterpolatingPrior:(CVPixelBufferRef)prior andNext:(CVPixelBufferRef)next {
-    NSLog(@"-fillPixelBuffer");
+    NSLog(@"-fillPixelBuffer:byInterpolatingPrior:andNext:");
 
     CVPixelBufferLockBaseAddress(pixelBuffer, 0);
     CVPixelBufferLockBaseAddress(prior, kCVPixelBufferLock_ReadOnly);
@@ -128,6 +128,7 @@
     void *baseAddress = CVPixelBufferGetBaseAddress(pixelBuffer);
     void *priorBaseAddress = CVPixelBufferGetBaseAddress(pixelBuffer);
     void *nextBaseAddress = CVPixelBufferGetBaseAddress(pixelBuffer);
+
 
     float *dspInput = malloc(sizeof(float) * (2 * dataSize));
     float *dspOutput = malloc(sizeof(float) * (dataSize));
@@ -143,6 +144,7 @@
 
     free(dspInput);
     free(dspOutput);
+
 
     NSLog(@"PRIOR width: %zu, height: %zu, bpr: %zu", CVPixelBufferGetWidth(prior), CVPixelBufferGetHeight(prior), CVPixelBufferGetBytesPerRow(prior));
     NSLog(@"PRIOR dataSize: %zu, actual size: %zu", dataSize, CVPixelBufferGetDataSize(prior));
@@ -218,6 +220,8 @@
  * Create a CVPixelBuffer from a CGImage
  */
 +(void)fillPixelBuffer:(CVPixelBufferRef)pixelBuffer withCGImage:(CGImageRef)image {
+    NSLog(@"-fillPixelBuffer:withCGImage:");
+
     CVPixelBufferLockBaseAddress(pixelBuffer, 0);
 
     CGContextRef context = [self newContextFromPixelBuffer:pixelBuffer];
