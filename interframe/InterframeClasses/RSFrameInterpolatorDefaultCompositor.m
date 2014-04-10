@@ -32,7 +32,7 @@
 
     @autoreleasepool {
         dispatch_async(_renderingQueue, ^{
-            RSFrameInterpolatorInterpolationInstruction *currentInstruction = asyncVideoCompositionRequest.videoCompositionInstruction;
+            RSFrameInterpolatorInterpolationInstruction *currentInstruction = (RSFrameInterpolatorInterpolationInstruction *)asyncVideoCompositionRequest.videoCompositionInstruction;
             if (![currentInstruction isKindOfClass:[RSFrameInterpolatorInterpolationInstruction class]])
             {
                 NSLog(@"Failed compositor because non-interpolation");
