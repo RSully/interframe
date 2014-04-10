@@ -155,23 +155,23 @@
     }
 
 
-//    NSLog(@"INS TEST:");
-//    CMTimeRange insAtr = CMTimeRangeMake(priorTimeRange.start, CMTimeSubtract(priorTimeRange.duration, outputFrameDuration));
-//    CMTimeRange insBtr = CMTimeRangeMake(CMTimeSubtract(priorEndTime, outputFrameDuration), outputFrameDuration);
-//    CMTimeRange insCtr = CMTimeRangeMake(priorEndTime, outputFrameDuration);
-//    CMTimeRangeShow(insAtr);
-//    CMTimeRangeShow(insBtr);
-//    CMTimeRangeShow(insCtr);
-//
-//    RSFrameInterpolatorPassthroughInstruction *insA = [[RSFrameInterpolatorPassthroughInstruction alloc] initWithPassthroughTrackID:priorID
-//                                                                                                                       forTimeRange:insAtr];
-//    RSFrameInterpolatorInterpolationInstruction *insB = [[RSFrameInterpolatorInterpolationInstruction alloc] initWithPriorFrameTrackID:priorID
-//                                                                                                                   andNextFrameTrackID:nextID
-//                                                                                                                          forTimeRange:insBtr];
-//    RSFrameInterpolatorPassthroughInstruction *insC = [[RSFrameInterpolatorPassthroughInstruction alloc] initWithPassthroughTrackID:nextID
-//                                                                                                                       forTimeRange:insCtr];
-//    outputVideoComposition.instructions = @[insA, insB, insC];
-//    return outputVideoComposition;
+    NSLog(@"INS TEST:");
+    CMTimeRange insAtr = CMTimeRangeMake(priorTimeRange.start, CMTimeSubtract(CMTimeSubtract(priorTimeRange.duration, outputFrameDuration), outputFrameDuration));
+    CMTimeRange insBtr = CMTimeRangeMake(CMTimeSubtract(CMTimeSubtract(priorEndTime, outputFrameDuration), outputFrameDuration), outputFrameDuration);
+    CMTimeRange insCtr = CMTimeRangeMake(CMTimeSubtract(priorEndTime, outputFrameDuration), CMTimeAdd(outputFrameDuration, outputFrameDuration));
+    CMTimeRangeShow(insAtr);
+    CMTimeRangeShow(insBtr);
+    CMTimeRangeShow(insCtr);
+
+    RSFrameInterpolatorPassthroughInstruction *insA = [[RSFrameInterpolatorPassthroughInstruction alloc] initWithPassthroughTrackID:priorID
+                                                                                                                       forTimeRange:insAtr];
+    RSFrameInterpolatorInterpolationInstruction *insB = [[RSFrameInterpolatorInterpolationInstruction alloc] initWithPriorFrameTrackID:priorID
+                                                                                                                   andNextFrameTrackID:nextID
+                                                                                                                          forTimeRange:insBtr];
+    RSFrameInterpolatorPassthroughInstruction *insC = [[RSFrameInterpolatorPassthroughInstruction alloc] initWithPassthroughTrackID:nextID
+                                                                                                                       forTimeRange:insCtr];
+    outputVideoComposition.instructions = @[insA, insB, insC];
+    return outputVideoComposition;
 
     /*
      * Handle creating timeranges and instructions for output
