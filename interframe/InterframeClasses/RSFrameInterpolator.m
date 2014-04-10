@@ -86,7 +86,7 @@
 
     // Calculate expected output metadata
     NSUInteger outputFrameCount = (inputFrameCount * 2) - 1;
-//    float outputFPS = self.outputFrameCount / inputDuration;
+//    float outputFPS = outputFrameCount / inputDuration;
     float outputFPS = inputFPS * 2.0;
     CMTime outputFrameDuration = CMTimeMakeWithSeconds(1.0 / outputFPS, kRSDurationResolution);
 
@@ -96,6 +96,7 @@
      */
 
     AVMutableVideoComposition *outputVideoComposition = [AVMutableVideoComposition videoCompositionWithPropertiesOfAsset:inputVideoTrack.asset];
+    outputVideoComposition.customVideoCompositorClass = self.compositor;
     outputVideoComposition.frameDuration = outputFrameDuration;
 
     /**
@@ -113,22 +114,23 @@
     CMPersistentTrackID priorID = compositionVideoTrackPrior.trackID;
     CMPersistentTrackID nextID = compositionVideoTrackNext.trackID;
 
-    CMTimeRange priorTimeRange = inputVideoTrack.timeRange;
-    CMTime priorEndTime = CMTimeAdd(priorTimeRange.start, priorTimeRange.duration);
-    CMTimeRange nextTimeRange = CMTimeRangeMake(CMTimeAdd(priorTimeRange.start, outputFrameDuration), inputVideoTrack.timeRange.duration);
 
-    // Convert to "big" scale
+    CMTimeRange priorTimeRange = inputVideoTrack.timeRange;
     priorTimeRange.start = CMTimeConvertScale(priorTimeRange.start, kRSDurationResolution, kCMTimeRoundingMethod_Default);
     priorTimeRange.duration = CMTimeConvertScale(priorTimeRange.duration, kRSDurationResolution, kCMTimeRoundingMethod_Default);
+
+    CMTime priorEndTime = CMTimeAdd(priorTimeRange.start, priorTimeRange.duration);
+
+    CMTimeRange nextTimeRange = CMTimeRangeMake(CMTimeAdd(priorTimeRange.start, outputFrameDuration), inputVideoTrack.timeRange.duration);
     nextTimeRange.start = CMTimeConvertScale(nextTimeRange.start, kRSDurationResolution, kCMTimeRoundingMethod_Default);
     nextTimeRange.duration = CMTimeConvertScale(nextTimeRange.duration, kRSDurationResolution, kCMTimeRoundingMethod_Default);
 
     NSLog(@"DEBUG:");
     CMTimeShow(outputFrameDuration);
     CMTimeRangeShow(priorTimeRange);
-    CMTimeRangeShow(inputVideoTrack.timeRange);
     CMTimeShow(priorEndTime);
     CMTimeRangeShow(nextTimeRange);
+
 
     [compositionVideoTrackPrior insertTimeRange:inputVideoTrack.timeRange
                                         ofTrack:inputVideoTrack
@@ -153,19 +155,23 @@
     }
 
 
-    NSLog(@"INS TEST:");
-    CMTimeRange insAtr = CMTimeRangeMake(priorTimeRange.start, CMTimeSubtract(priorTimeRange.duration, outputFrameDuration));
-    CMTimeRange insBtr = CMTimeRangeMake(CMTimeSubtract(priorEndTime, outputFrameDuration), outputFrameDuration);
-    CMTimeRange insCtr = CMTimeRangeMake(priorEndTime, outputFrameDuration);
-    CMTimeRangeShow(insAtr);
-    CMTimeRangeShow(insBtr);
-    CMTimeRangeShow(insCtr);
-
-    RSFrameInterpolatorPassthroughInstruction *insA = [[RSFrameInterpolatorPassthroughInstruction alloc] initWithPassthroughTrackID:priorID forTimeRange:insAtr];
-    RSFrameInterpolatorInterpolationInstruction *insB = [[RSFrameInterpolatorInterpolationInstruction alloc] initWithPriorFrameTrackID:priorID andNextFrameTrackID:nextID forTimeRange:insBtr];
-    RSFrameInterpolatorPassthroughInstruction *insC = [[RSFrameInterpolatorPassthroughInstruction alloc] initWithPassthroughTrackID:nextID forTimeRange:insCtr];
-    outputVideoComposition.instructions = @[insA, insB, insC];
-    return outputVideoComposition;
+//    NSLog(@"INS TEST:");
+//    CMTimeRange insAtr = CMTimeRangeMake(priorTimeRange.start, CMTimeSubtract(priorTimeRange.duration, outputFrameDuration));
+//    CMTimeRange insBtr = CMTimeRangeMake(CMTimeSubtract(priorEndTime, outputFrameDuration), outputFrameDuration);
+//    CMTimeRange insCtr = CMTimeRangeMake(priorEndTime, outputFrameDuration);
+//    CMTimeRangeShow(insAtr);
+//    CMTimeRangeShow(insBtr);
+//    CMTimeRangeShow(insCtr);
+//
+//    RSFrameInterpolatorPassthroughInstruction *insA = [[RSFrameInterpolatorPassthroughInstruction alloc] initWithPassthroughTrackID:priorID
+//                                                                                                                       forTimeRange:insAtr];
+//    RSFrameInterpolatorInterpolationInstruction *insB = [[RSFrameInterpolatorInterpolationInstruction alloc] initWithPriorFrameTrackID:priorID
+//                                                                                                                   andNextFrameTrackID:nextID
+//                                                                                                                          forTimeRange:insBtr];
+//    RSFrameInterpolatorPassthroughInstruction *insC = [[RSFrameInterpolatorPassthroughInstruction alloc] initWithPassthroughTrackID:nextID
+//                                                                                                                       forTimeRange:insCtr];
+//    outputVideoComposition.instructions = @[insA, insB, insC];
+//    return outputVideoComposition;
 
     /*
      * Handle creating timeranges and instructions for output
@@ -209,10 +215,10 @@
         }
     }
 
-//    // Add the instructions
-//    outputVideoComposition.instructions = instructions;
-//
-//    return outputVideoComposition;
+    // Add the instructions
+    outputVideoComposition.instructions = instructions;
+
+    return outputVideoComposition;
 }
 
 -(void)interpolate {
@@ -222,7 +228,6 @@
     AVMutableComposition *outputComposition = [self buildComposition];
     AVMutableVideoComposition *outputVideoComposition = [self buildVideoCompositionForComposition:outputComposition
                                                                                     andVideoTrack:videoTrack];
-
     NSLog(@"Built composition!");
 
 
@@ -235,6 +240,7 @@
     self.exportSession.outputFileType = CFBridgingRelease(UTTypeCreatePreferredIdentifierForTag(kUTTagClassFilenameExtension, (__bridge CFStringRef)self.outputUrl.pathExtension, NULL));
     self.exportSession.outputURL = self.outputUrl;
 
+    NSLog(@"Begin export");
 
     [self.exportSession exportAsynchronouslyWithCompletionHandler:^{
         NSLog(@"Export completion, %ld", self.exportSession.status);
