@@ -44,15 +44,20 @@
 
             AVVideoCompositionRenderContext *renderContext = asyncVideoCompositionRequest.renderContext;
             CVPixelBufferRef inbetweenPixelBuffer = [renderContext newPixelBuffer];
+            CVImageBufferRef priorPixelBuffer = [asyncVideoCompositionRequest sourceFrameByTrackID:currentInstruction.priorID];
+            CVImageBufferRef nextPixelBuffer = [asyncVideoCompositionRequest sourceFrameByTrackID:currentInstruction.nextID];
+
+            CVPixelBufferLockBaseAddress(inbetweenPixelBuffer, 0);
+            CVPixelBufferLockBaseAddress(priorPixelBuffer, kCVPixelBufferLock_ReadOnly);
+            CVPixelBufferLockBaseAddress(nextPixelBuffer, kCVPixelBufferLock_ReadOnly);
 
 
             // TODO: get rid of all context/cgimage stuff and work with bytes directly
-            CVImageBufferRef priorPixelBuffer = [asyncVideoCompositionRequest sourceFrameByTrackID:currentInstruction.priorID];
-            CVImageBufferRef nextPixelBuffer = [asyncVideoCompositionRequest sourceFrameByTrackID:currentInstruction.nextID];
             CGImageRef priorImage = [[self class] newCGImageFromPixelBuffer:priorPixelBuffer];
             CGImageRef nextImage = [[self class] newCGImageFromPixelBuffer:nextPixelBuffer];
             CGImageRef inbetweenImage = [[self class] newInterpolatedImageWithPrior:priorImage
                                                                             andNext:nextImage];
+            NSLog(@"Got interpolated image");
             CGImageRelease(priorImage);
             CGImageRelease(nextImage);
 
@@ -61,9 +66,14 @@
             CGImageRelease(inbetweenImage);
 
 
+            NSLog(@"going to finish frame");
             [asyncVideoCompositionRequest finishWithComposedVideoFrame:inbetweenPixelBuffer];
+            NSLog(@"finished frame");
 
             // Cleanup
+            CVPixelBufferUnlockBaseAddress(inbetweenPixelBuffer, 0);
+            CVPixelBufferUnlockBaseAddress(priorPixelBuffer, 0);
+            CVPixelBufferUnlockBaseAddress(nextPixelBuffer, 0);
             CVPixelBufferRelease(inbetweenPixelBuffer);
         });
     }
@@ -100,11 +110,12 @@
  * This will be removed eventually
  */
 
-#define kRSFIBitmapInfo (kCGBitmapByteOrder32Little | kCGImageAlphaPremultipliedFirst)
-#define kRSFIPixelFormatType kCVPixelFormatType_32BGRA
+#define kRSBitmapInfo (kCGBitmapByteOrder32Little | kCGImageAlphaPremultipliedFirst)
 
 
 +(CGImageRef)newInterpolatedImageWithPrior:(CGImageRef)priorImage andNext:(CGImageRef)nextImage {
+    NSLog(@"-newInterpolatedImage");
+
     ANImageBitmapRep *prior = [[ANImageBitmapRep alloc] initWithCGImage:priorImage];
     ANImageBitmapRep *next = [[ANImageBitmapRep alloc] initWithCGImage:nextImage];
 
@@ -180,7 +191,7 @@
     // Using device RGB - is this best?
     CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
 
-    CGContextRef context = CGBitmapContextCreate(baseAddress, width, height, 8, bytesPerRow, colorSpace, kRSFIBitmapInfo);
+    CGContextRef context = CGBitmapContextCreate(baseAddress, width, height, 8, bytesPerRow, colorSpace, kRSBitmapInfo);
 
     // Cleanup
     CGColorSpaceRelease(colorSpace);
