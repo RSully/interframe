@@ -16,19 +16,12 @@
 -(void)interpolatorFinished:(RSFrameInterpolator *)interpolator;
 @end
 
-@protocol RSFrameInterpolatorCompositor <AVVideoCompositing>
-@end
-
 
 @interface RSFrameInterpolator : NSObject
 
--(id)initWithAsset:(AVAsset *)asset output:(NSURL *)output compositor:(Class<RSFrameInterpolatorCompositor>)compositor;
-
+-(id)initWithAsset:(AVAsset *)asset output:(NSURL *)output compositor:(Class<AVVideoCompositing>)compositor;
 
 -(void)interpolate;
-
-
--(void)setCompositor:(Class<RSFrameInterpolatorCompositor>)compositor;
 
 @property (weak) id<RSFrameInterpolatorDelegate> delegate;
 

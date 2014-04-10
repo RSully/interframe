@@ -10,6 +10,6 @@
 #import "RSFrameInterpolator.h"
 #import <Accelerate/Accelerate.h>
 
-@interface RSFrameInterpolatorDefaultCompositor : NSObject <RSFrameInterpolatorCompositor>
+@interface RSFrameInterpolatorDefaultCompositor : NSObject <AVVideoCompositing>
 
 @end

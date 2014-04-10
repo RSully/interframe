@@ -19,14 +19,14 @@
 @property (strong) AVAsset *inputAsset;
 @property (strong) NSURL *outputUrl;
 @property (strong) AVAssetExportSession *exportSession;
-@property Class<RSFrameInterpolatorCompositor> compositor;
+@property Class<AVVideoCompositing> compositor;
 
 @end
 
 
 @implementation RSFrameInterpolator
 
--(id)initWithAsset:(AVAsset *)asset output:(NSURL *)output compositor:(Class<RSFrameInterpolatorCompositor>)compositor {
+-(id)initWithAsset:(AVAsset *)asset output:(NSURL *)output compositor:(Class<AVVideoCompositing>)compositor {
     if ((self = [self init]))
     {
         self.inputAsset = asset;
@@ -72,6 +72,7 @@
 
     return outputComposition;
 }
+
 -(AVMutableVideoComposition *)buildVideoCompositionForComposition:(AVMutableComposition*)composition
                                                     andVideoTrack:(AVAssetTrack *)inputVideoTrack {
 
@@ -218,6 +219,7 @@
 
     return outputVideoComposition;
 }
+
 
 -(void)interpolate {
 
