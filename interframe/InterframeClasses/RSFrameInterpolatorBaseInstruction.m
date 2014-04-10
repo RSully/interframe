@@ -10,30 +10,10 @@
 
 @implementation RSFrameInterpolatorBaseInstruction
 
--(BOOL)enablePostProcessing {
-    return NO;
-}
-
--(BOOL)containsTweening {
-    return NO;
-}
-
--(CMPersistentTrackID)passthroughTrackID {
-    return kCMPersistentTrackID_Invalid;
-}
-
--(NSArray *)requiredSourceTrackIDs {
-    return @[];
-}
-
--(CMTimeRange)timeRange {
-    return kCMTimeRangeInvalid;
-}
-
-
 +(NSString *)descriptionOfTime:(CMTime)time {
     return [NSString stringWithFormat:@"%f", CMTimeGetSeconds(time)];
 }
+
 -(NSString *)description {
     return [NSString stringWithFormat:@"<%@ %p, enablePostProcessing = %d, containsTweening = %d, passthroughTrackID = %d, requiredSourceTrackIDs = %@, timeRange = <start = %@, duration = %@>>",
             NSStringFromClass([self class]),
