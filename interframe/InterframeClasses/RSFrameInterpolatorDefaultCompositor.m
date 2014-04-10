@@ -36,7 +36,7 @@
             if (![currentInstruction isKindOfClass:[RSFrameInterpolatorInterpolationInstruction class]])
             {
                 NSLog(@"Failed compositor because non-interpolation");
-                [asyncVideoCompositionRequest finishWithError:[NSError errorWithDomain:@"me.rsullivan.apps.interframe" code:0 userInfo:nil]];
+                [asyncVideoCompositionRequest finishWithError:[NSError errorWithDomain:@"me.rsullivan.apps.interframe" code:1 userInfo:nil]];
                 return;
             }
 
@@ -44,36 +44,41 @@
 
             AVVideoCompositionRenderContext *renderContext = asyncVideoCompositionRequest.renderContext;
             CVPixelBufferRef inbetweenPixelBuffer = [renderContext newPixelBuffer];
+            if (!inbetweenPixelBuffer)
+            {
+                NSLog(@"Didnt get pixel buffer to write to");
+                [asyncVideoCompositionRequest finishWithError:[NSError errorWithDomain:@"com.rsullivan.apps.interframe" code:2 userInfo:nil]];
+                return;
+            }
             CVImageBufferRef priorPixelBuffer = [asyncVideoCompositionRequest sourceFrameByTrackID:currentInstruction.priorID];
             CVImageBufferRef nextPixelBuffer = [asyncVideoCompositionRequest sourceFrameByTrackID:currentInstruction.nextID];
 
-            CVPixelBufferLockBaseAddress(inbetweenPixelBuffer, 0);
-            CVPixelBufferLockBaseAddress(priorPixelBuffer, kCVPixelBufferLock_ReadOnly);
-            CVPixelBufferLockBaseAddress(nextPixelBuffer, kCVPixelBufferLock_ReadOnly);
-
 
             // TODO: get rid of all context/cgimage stuff and work with bytes directly
-            CGImageRef priorImage = [[self class] newCGImageFromPixelBuffer:priorPixelBuffer];
-            CGImageRef nextImage = [[self class] newCGImageFromPixelBuffer:nextPixelBuffer];
-            CGImageRef inbetweenImage = [[self class] newInterpolatedImageWithPrior:priorImage
-                                                                            andNext:nextImage];
-            NSLog(@"Got interpolated image");
-            CGImageRelease(priorImage);
-            CGImageRelease(nextImage);
+            {
+                // Get images to pass to old interpolation function
+                CGImageRef priorImage = [[self class] newCGImageFromPixelBuffer:priorPixelBuffer];
+                CGImageRef nextImage = [[self class] newCGImageFromPixelBuffer:nextPixelBuffer];
+                CGImageRef inbetweenImage = [[self class] newInterpolatedImageWithPrior:priorImage
+                                                                                andNext:nextImage];
+                CGImageRelease(priorImage);
+                CGImageRelease(nextImage);
+                NSLog(@"Got interpolated image");
 
-            // Handles locks internally:
-            [[self class] fillPixelBuffer:inbetweenPixelBuffer withCGImage:inbetweenImage];
-            CGImageRelease(inbetweenImage);
+                // Write to the pixel buffer from the interpolated image
+                [[self class] fillPixelBuffer:inbetweenPixelBuffer withCGImage:inbetweenImage];
+                CGImageRelease(inbetweenImage);
+            }
 
+            [[self class] fillPixelBuffer:inbetweenPixelBuffer byInterpolatingPrior:priorPixelBuffer andNext:nextPixelBuffer];
 
             NSLog(@"going to finish frame");
+            // Return the pixel buffer
+//            [asyncVideoCompositionRequest finishWithComposedVideoFrame:priorPixelBuffer];
             [asyncVideoCompositionRequest finishWithComposedVideoFrame:inbetweenPixelBuffer];
             NSLog(@"finished frame");
 
             // Cleanup
-            CVPixelBufferUnlockBaseAddress(inbetweenPixelBuffer, 0);
-            CVPixelBufferUnlockBaseAddress(priorPixelBuffer, 0);
-            CVPixelBufferUnlockBaseAddress(nextPixelBuffer, 0);
             CVPixelBufferRelease(inbetweenPixelBuffer);
         });
     }
@@ -88,18 +93,65 @@
  * Pixel format and options
  */
 
+-(NSDictionary *)defaultPixelBufferAttributes {
+    return @{
+             (NSString *)kCVPixelBufferPixelFormatTypeKey: @[@(kCVPixelFormatType_32BGRA)],
+//             (NSString *)kCVPixelBufferCGBitmapContextCompatibilityKey: @(YES),
+//             (NSString *)kCVPixelBufferCGImageCompatibilityKey: @(YES),
+             };
+}
+
 -(NSDictionary *)requiredPixelBufferAttributesForRenderContext {
     NSLog(@"-requiredPixelBufferAttributesForRenderContext");
-    return @{
-        (NSString *)kCVPixelBufferPixelFormatTypeKey: @[@(kCVPixelFormatType_32BGRA)]
-    };
+    return [self defaultPixelBufferAttributes];
 }
 
 -(NSDictionary *)sourcePixelBufferAttributes {
     NSLog(@"-sourcePixelBufferAttributes");
-    return @{
-        (NSString *)kCVPixelBufferPixelFormatTypeKey: @[@(kCVPixelFormatType_32BGRA)]
-    };
+    return [self defaultPixelBufferAttributes];
+}
+
+
+/**
+ * Interpolation logic
+ */
+
+
++(void)fillPixelBuffer:(CVPixelBufferRef)pixelBuffer byInterpolatingPrior:(CVPixelBufferRef)prior andNext:(CVPixelBufferRef)next {
+    NSLog(@"-fillPixelBuffer");
+
+    CVPixelBufferLockBaseAddress(pixelBuffer, 0);
+    CVPixelBufferLockBaseAddress(prior, kCVPixelBufferLock_ReadOnly);
+    CVPixelBufferLockBaseAddress(next, kCVPixelBufferLock_ReadOnly);
+
+    size_t dataSize = CVPixelBufferGetBytesPerRow(prior) * CVPixelBufferGetHeight(prior);
+    void *baseAddress = CVPixelBufferGetBaseAddress(pixelBuffer);
+    void *priorBaseAddress = CVPixelBufferGetBaseAddress(pixelBuffer);
+    void *nextBaseAddress = CVPixelBufferGetBaseAddress(pixelBuffer);
+
+    float *dspInput = malloc(sizeof(float) * (2 * dataSize));
+    float *dspOutput = malloc(sizeof(float) * (dataSize));
+
+    // cast data
+    vDSP_vfltu8(priorBaseAddress, 1, dspInput, 1, dataSize);
+    vDSP_vfltu8(nextBaseAddress, 1, &dspInput[dataSize], 1, dataSize);
+
+    // compute averages
+    float leftMatrix[] = {0.5f, 0.5f};
+    vDSP_mmul(leftMatrix, 1, dspInput, 1, dspOutput, 1, 1, dataSize, 2);
+    vDSP_vfixu8(dspOutput, 1, baseAddress, 1, dataSize);
+
+    free(dspInput);
+    free(dspOutput);
+
+    NSLog(@"PRIOR width: %zu, height: %zu, bpr: %zu", CVPixelBufferGetWidth(prior), CVPixelBufferGetHeight(prior), CVPixelBufferGetBytesPerRow(prior));
+    NSLog(@"PRIOR dataSize: %zu, actual size: %zu", dataSize, CVPixelBufferGetDataSize(prior));
+    NSLog(@"DEST width: %zu, height: %zu, bpr: %zu", CVPixelBufferGetWidth(pixelBuffer), CVPixelBufferGetHeight(pixelBuffer), CVPixelBufferGetBytesPerRow(pixelBuffer));
+    NSLog(@"DEST dataSize: %zu, actual size: %zu", dataSize, CVPixelBufferGetDataSize(pixelBuffer));
+
+    CVPixelBufferUnlockBaseAddress(pixelBuffer, 0);
+    CVPixelBufferUnlockBaseAddress(prior, kCVPixelBufferLock_ReadOnly);
+    CVPixelBufferUnlockBaseAddress(next, kCVPixelBufferLock_ReadOnly);
 }
 
 
@@ -109,8 +161,6 @@
  *
  * This will be removed eventually
  */
-
-#define kRSBitmapInfo (kCGBitmapByteOrder32Little | kCGImageAlphaPremultipliedFirst)
 
 
 +(CGImageRef)newInterpolatedImageWithPrior:(CGImageRef)priorImage andNext:(CGImageRef)nextImage {
@@ -151,7 +201,7 @@
  * Some logic from: http://stackoverflow.com/questions/3305862/uiimage-created-from-cmsamplebufferref-not-displayed-in-uiimageview
  */
 +(CGImageRef)newCGImageFromPixelBuffer:(CVPixelBufferRef)pixelBuffer {
-    CVPixelBufferLockBaseAddress(pixelBuffer, 0);
+    CVPixelBufferLockBaseAddress(pixelBuffer, kCVPixelBufferLock_ReadOnly);
 
     CGContextRef context = [self newContextFromPixelBuffer:pixelBuffer];
 
@@ -160,7 +210,7 @@
 
     // Cleanup
     CGContextRelease(context);
-    CVPixelBufferUnlockBaseAddress(pixelBuffer, 0);
+    CVPixelBufferUnlockBaseAddress(pixelBuffer, kCVPixelBufferLock_ReadOnly);
 
     return image;
 }
@@ -180,6 +230,7 @@
 }
 /**
  * Create a context from a given pixel buffer
+ * Pixel buffer should be locked before calling
  */
 +(CGContextRef)newContextFromPixelBuffer:(CVPixelBufferRef)pixelBuffer {
     // Get info about image
@@ -191,7 +242,7 @@
     // Using device RGB - is this best?
     CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
 
-    CGContextRef context = CGBitmapContextCreate(baseAddress, width, height, 8, bytesPerRow, colorSpace, kRSBitmapInfo);
+    CGContextRef context = CGBitmapContextCreate(baseAddress, width, height, 8, bytesPerRow, colorSpace, (kCGBitmapByteOrder32Little | kCGImageAlphaPremultipliedFirst));
 
     // Cleanup
     CGColorSpaceRelease(colorSpace);
