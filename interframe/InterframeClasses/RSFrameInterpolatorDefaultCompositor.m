@@ -9,6 +9,7 @@
 #import "RSFrameInterpolatorDefaultCompositor.h"
 #import "RSFrameInterpolatorInterpolationInstruction.h"
 #import "RSFrameInterpolatorPassthroughInstruction.h"
+#import <AppKit/AppKit.h>
 
 @interface RSFrameInterpolatorDefaultCompositor () {
     dispatch_queue_t _renderingQueue;
@@ -39,7 +40,7 @@
                 return;
             }
 
-            NSLog(@"Rendering interpolation frame");
+//            NSLog(@"Rendering interpolation frame");
 
             AVVideoCompositionRenderContext *renderContext = asyncVideoCompositionRequest.renderContext;
             CVPixelBufferRef inbetweenPixelBuffer = [renderContext newPixelBuffer];
@@ -53,14 +54,17 @@
             CVImageBufferRef nextPixelBuffer = [asyncVideoCompositionRequest sourceFrameByTrackID:currentInstruction.nextID];
 
 
+
             [[self class] fillPixelBuffer:inbetweenPixelBuffer byInterpolatingPrior:priorPixelBuffer andNext:nextPixelBuffer];
+            CVBufferSetAttachments(inbetweenPixelBuffer, CVBufferGetAttachments(priorPixelBuffer, kCVAttachmentMode_ShouldPropagate), kCVAttachmentMode_ShouldPropagate);
 
 
-            NSLog(@"going to finish frame");
+
+//            NSLog(@"going to finish frame");
             // Return the pixel buffer
 //            [asyncVideoCompositionRequest finishWithComposedVideoFrame:priorPixelBuffer];
             [asyncVideoCompositionRequest finishWithComposedVideoFrame:inbetweenPixelBuffer];
-            NSLog(@"finished frame");
+//            NSLog(@"finished frame");
 
             // Cleanup
             CVPixelBufferRelease(inbetweenPixelBuffer);
@@ -87,12 +91,12 @@
 }
 
 -(NSDictionary *)requiredPixelBufferAttributesForRenderContext {
-    NSLog(@"-requiredPixelBufferAttributesForRenderContext");
+//    NSLog(@"-requiredPixelBufferAttributesForRenderContext");
     return [self defaultPixelBufferAttributes];
 }
 
 -(NSDictionary *)sourcePixelBufferAttributes {
-    NSLog(@"-sourcePixelBufferAttributes");
+//    NSLog(@"-sourcePixelBufferAttributes");
     return [self defaultPixelBufferAttributes];
 }
 
@@ -103,11 +107,11 @@
 
 
 +(void)fillPixelBuffer:(CVPixelBufferRef)pixelBuffer byInterpolatingPrior:(CVPixelBufferRef)prior andNext:(CVPixelBufferRef)next {
-    NSLog(@"-fillPixelBuffer:byInterpolatingPrior:andNext:");
+//    NSLog(@"-fillPixelBuffer:byInterpolatingPrior:andNext:");
 
-    CVPixelBufferLockBaseAddress(pixelBuffer, 0);
     CVPixelBufferLockBaseAddress(prior, kCVPixelBufferLock_ReadOnly);
     CVPixelBufferLockBaseAddress(next, kCVPixelBufferLock_ReadOnly);
+    CVPixelBufferLockBaseAddress(pixelBuffer, 0);
 
     size_t dataSize = CVPixelBufferGetBytesPerRow(prior) * CVPixelBufferGetHeight(prior);
     void *baseAddress = CVPixelBufferGetBaseAddress(pixelBuffer);
@@ -132,15 +136,9 @@
 
 
 
-    NSLog(@"PRIOR width: %zu, height: %zu, bpr: %zu", CVPixelBufferGetWidth(prior), CVPixelBufferGetHeight(prior), CVPixelBufferGetBytesPerRow(prior));
-    NSLog(@"PRIOR dataSize: %zu, actual size: %zu", dataSize, CVPixelBufferGetDataSize(prior));
-    NSLog(@"DEST width: %zu, height: %zu, bpr: %zu", CVPixelBufferGetWidth(pixelBuffer), CVPixelBufferGetHeight(pixelBuffer), CVPixelBufferGetBytesPerRow(pixelBuffer));
-    NSLog(@"DEST dataSize: %zu, actual size: %zu", dataSize, CVPixelBufferGetDataSize(pixelBuffer));
-
-
     CVPixelBufferUnlockBaseAddress(pixelBuffer, 0);
-    CVPixelBufferUnlockBaseAddress(prior, kCVPixelBufferLock_ReadOnly);
     CVPixelBufferUnlockBaseAddress(next, kCVPixelBufferLock_ReadOnly);
+    CVPixelBufferUnlockBaseAddress(prior, kCVPixelBufferLock_ReadOnly);
 }
 
 
