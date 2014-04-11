@@ -47,7 +47,6 @@
 
     NSMutableArray *inputVideoTracks = [NSMutableArray array];
 
-    NSLog(@"Copying non-video tracks to outputComposition");
     // Copy any tracks that aren't video
     for (AVAssetTrack *inputTrack in self.inputAsset.tracks)
     {
@@ -81,15 +80,20 @@
      */
 
     // Calculate input metadata
-    float inputDuration = CMTimeGetSeconds(inputVideoTrack.timeRange.duration);
-    float inputFPS = inputVideoTrack.nominalFrameRate;
+    Float64 inputDuration = CMTimeGetSeconds(inputVideoTrack.timeRange.duration);
+    Float64 inputFPS = inputVideoTrack.nominalFrameRate;
     NSUInteger inputFrameCount = round(inputFPS * inputDuration);
+    Float64 inputFrameDurationSeconds = 1.0 / inputFPS;
 
     // Calculate expected output metadata
     NSUInteger outputFrameCount = (inputFrameCount * 2) - 1;
-    float outputFPS = outputFrameCount / inputDuration;
-//    float outputFPS = inputFPS * 2.0;
-    CMTime outputFrameDuration = CMTimeMakeWithSeconds(1.0 / outputFPS, kRSDurationResolution);
+    Float64 outputFPS = outputFrameCount / inputDuration;
+    Float64 outputFrameDurationSeconds = 1.0 / outputFPS;
+    CMTime outputFrameDuration = CMTimeMakeWithSeconds(outputFrameDurationSeconds, kRSDurationResolution);
+
+    CMTimeShow(outputFrameDuration);
+    NSLog(@"inputDuration: %f, inputFrameDuration = %f, inputFPS: %f, inputFrameCount: %lu", inputDuration, inputFrameDurationSeconds, inputFPS, inputFrameCount);
+    NSLog(@"outputDuration: %f, outputFrameDuration = %f, outputFPS: %f, outputFrameCount: %lu", outputFrameDurationSeconds * outputFrameCount, outputFrameDurationSeconds, outputFPS, outputFrameCount);
 
 
     /**
@@ -105,72 +109,63 @@
      */
 
     NSError *err = nil;
-    AVMutableCompositionTrack *compositionVideoTrackPrior, *compositionVideoTrackNext;
+    AVMutableCompositionTrack *compositionVideoTrackPrior, *compositionVideoTrackNext, *compositionVideoTrackOrigin;
 
     compositionVideoTrackPrior = [composition addMutableTrackWithMediaType:AVMediaTypeVideo
                                                           preferredTrackID:kCMPersistentTrackID_Invalid];
     compositionVideoTrackNext = [composition addMutableTrackWithMediaType:AVMediaTypeVideo
                                                          preferredTrackID:kCMPersistentTrackID_Invalid];
+    compositionVideoTrackOrigin = [composition addMutableTrackWithMediaType:AVMediaTypeVideo
+                                                           preferredTrackID:kCMPersistentTrackID_Invalid];
 
-    CMPersistentTrackID priorID = compositionVideoTrackPrior.trackID;
+    CMPersistentTrackID originID = compositionVideoTrackOrigin.trackID;
     CMPersistentTrackID nextID = compositionVideoTrackNext.trackID;
+    CMPersistentTrackID priorID = compositionVideoTrackPrior.trackID;
 
 
-    CMTimeRange priorTimeRange = inputVideoTrack.timeRange;
-    priorTimeRange.start = CMTimeConvertScale(priorTimeRange.start, kRSDurationResolution, kCMTimeRoundingMethod_Default);
-    priorTimeRange.duration = CMTimeConvertScale(priorTimeRange.duration, kRSDurationResolution, kCMTimeRoundingMethod_Default);
+    CMTimeRange originTimeRange = inputVideoTrack.timeRange;
+    originTimeRange.start = CMTimeConvertScale(originTimeRange.start, kRSDurationResolution, kCMTimeRoundingMethod_Default);
+    originTimeRange.duration = CMTimeConvertScale(originTimeRange.duration, kRSDurationResolution, kCMTimeRoundingMethod_Default);
 
-    CMTime priorEndTime = CMTimeAdd(priorTimeRange.start, priorTimeRange.duration);
-    CMTimeRange nextTimeRange = CMTimeRangeMake(CMTimeAdd(priorTimeRange.start, outputFrameDuration), priorTimeRange.duration);
+    CMTimeRange nextTimeRange = CMTimeRangeMake(originTimeRange.start, CMTimeSubtract(originTimeRange.duration, outputFrameDuration));
+    CMTimeRange priorTimeRange = CMTimeRangeMake(CMTimeAdd(originTimeRange.start, outputFrameDuration), CMTimeSubtract(originTimeRange.duration, outputFrameDuration));
 
     NSLog(@"DEBUG:");
-    CMTimeShow(outputFrameDuration);
-    CMTimeRangeShow(priorTimeRange);
-    CMTimeShow(priorEndTime);
+    CMTimeRangeShow(originTimeRange);
     CMTimeRangeShow(nextTimeRange);
+    CMTimeRangeShow(priorTimeRange);
 
 
-    [compositionVideoTrackPrior insertTimeRange:inputVideoTrack.timeRange
-                                        ofTrack:inputVideoTrack
-                                         atTime:priorTimeRange.start
-                                          error:&err];
-//    [compositionVideoTrackPrior insertEmptyTimeRange:CMTimeRangeMake(priorEndTime, outputFrameDuration)];
-    if (err)
-    {
-        NSLog(@"** Failed to insert prior video track into output composition: %@", err);
-        return nil;
-    }
+//    [compositionVideoTrackOrigin insertTimeRange:originTimeRange
+//                                         ofTrack:inputVideoTrack
+//                                          atTime:originTimeRange.start
+//                                           error:&err];
+//    if (err)
+//    {
+//        NSLog(@"** Failed to insert origin video track into output composition: %@", err);
+//    }
+//
+//    [compositionVideoTrackNext insertTimeRange:nextTimeRange
+//                                       ofTrack:inputVideoTrack
+//                                        atTime:CMTimeAdd(originTimeRange.start, outputFrameDuration)
+//                                         error:&err];
+//    if (err)
+//    {
+//        NSLog(@"** Failed to insert next video track into output composition: %@", err);
+//        return nil;
+//    }
+//
+//    [compositionVideoTrackPrior insertTimeRange:priorTimeRange
+//                                        ofTrack:inputVideoTrack
+//                                         atTime:originTimeRange.start
+//                                          error:&err];
+//    if (err)
+//    {
+//        NSLog(@"** Failed to insert prior video track into output composition: %@", err);
+//        return nil;
+//    }
 
-//    [compositionVideoTrackNext insertEmptyTimeRange:CMTimeRangeMake(priorTimeRange.start, outputFrameDuration)];
-    [compositionVideoTrackNext insertTimeRange:inputVideoTrack.timeRange
-                                       ofTrack:inputVideoTrack
-                                        atTime:nextTimeRange.start
-                                         error:&err];
-    if (err)
-    {
-        NSLog(@"** Failed to insert next video track into output composition: %@", err);
-        return nil;
-    }
 
-
-    NSLog(@"INS TEST:");
-    CMTime peM2 = CMTimeSubtract(CMTimeSubtract(priorEndTime, outputFrameDuration), outputFrameDuration);
-    CMTimeRange insAtr = CMTimeRangeMake(priorTimeRange.start, peM2);
-    CMTimeRange insBtr = CMTimeRangeMake(peM2, CMTimeAdd(outputFrameDuration, outputFrameDuration));
-    CMTimeRange insCtr = CMTimeRangeMake(CMTimeAdd(peM2, CMTimeAdd(outputFrameDuration, outputFrameDuration)), outputFrameDuration);
-    CMTimeRangeShow(insAtr);
-    CMTimeRangeShow(insBtr);
-    CMTimeRangeShow(insCtr);
-
-    RSFrameInterpolatorPassthroughInstruction *insA = [[RSFrameInterpolatorPassthroughInstruction alloc] initWithPassthroughTrackID:priorID
-                                                                                                                       forTimeRange:insAtr];
-    RSFrameInterpolatorInterpolationInstruction *insB = [[RSFrameInterpolatorInterpolationInstruction alloc] initWithPriorFrameTrackID:priorID
-                                                                                                                   andNextFrameTrackID:nextID
-                                                                                                                          forTimeRange:insBtr];
-    RSFrameInterpolatorPassthroughInstruction *insC = [[RSFrameInterpolatorPassthroughInstruction alloc] initWithPassthroughTrackID:nextID
-                                                                                                                       forTimeRange:insCtr];
-    outputVideoComposition.instructions = @[insA, insB, insC];
-    return outputVideoComposition;
 
     /*
      * Handle creating timeranges and instructions for output
@@ -179,40 +174,87 @@
 
     NSMutableArray *instructions = [NSMutableArray arrayWithCapacity:outputFrameCount];
 
-    NSUInteger framePrior, frameInbetween, frameNext;
-    CMTime timePrior, timeInbetween, timeNext;
-    CMTimeRange timeRangePrior, timeRangeInbetween, timeRangeNext;
-
-    // Then handle all inbetween+next:
+    // expr         explain                 output      input
+    // -----------------------------------------------------------
+    // frame - 2 = first source frame   // 0 2 4    // 0 1 2
+    // frame - 1 = inbetween frame      // 1 3 5    //
+    // frame - 0 = last source frame    // 2 4 6    // 1 2 3
+    // -----------------------------------------------------------
     for (NSUInteger frame = 2; frame < outputFrameCount; frame += 2)
     {
         @autoreleasepool {
+            NSUInteger framePrior, frameInbetween, frameNext;
+            CMTime timePrior, timeInbetween, timeNext;
+            CMTimeRange timeRangePrior, timeRangeInbetween, timeRangeNext;
+
+            NSUInteger framePriorInput, frameNextInput;
+            CMTime timePriorInput, timeNextInput;
+            CMTimeRange timeRangePriorInput, timeRangeNextInput;
+
             framePrior = frame - 2;
             frameInbetween = frame - 1;
             frameNext = frame;
 
-            timePrior = CMTimeAdd(priorTimeRange.start, CMTimeMakeWithSeconds(framePrior / outputFPS, kRSDurationResolution));
-            timeInbetween = CMTimeAdd(priorTimeRange.start, CMTimeMakeWithSeconds(frameInbetween / outputFPS, kRSDurationResolution));
-            timeNext = CMTimeAdd(priorTimeRange.start, CMTimeMakeWithSeconds(frameNext / outputFPS, kRSDurationResolution));
+            timePrior = CMTimeAdd(originTimeRange.start, CMTimeMakeWithSeconds(framePrior / outputFPS, kRSDurationResolution));
+            timeInbetween = CMTimeAdd(originTimeRange.start, CMTimeMakeWithSeconds(frameInbetween / outputFPS, kRSDurationResolution));
+            timeNext = CMTimeAdd(originTimeRange.start, CMTimeMakeWithSeconds(frameNext / outputFPS, kRSDurationResolution));
 
             timeRangePrior = CMTimeRangeMake(timePrior, outputFrameDuration);
             timeRangeInbetween = CMTimeRangeMake(timeInbetween, outputFrameDuration);
             timeRangeNext = CMTimeRangeMake(timeNext, outputFrameDuration);
 
+
+            framePriorInput = framePrior / 2;
+            frameNextInput = frameNext / 2;
+
+            timePriorInput = CMTimeAdd(originTimeRange.start, CMTimeMakeWithSeconds(framePriorInput / inputFPS, kRSDurationResolution));
+            timeNextInput = CMTimeAdd(originTimeRange.start, CMTimeMakeWithSeconds(frameNextInput / inputFPS, kRSDurationResolution));
+
+            timeRangePriorInput = CMTimeRangeMake(timePriorInput, outputFrameDuration);
+            timeRangeNextInput = CMTimeRangeMake(timeNextInput, outputFrameDuration);
+
+            NSLog(@"%lu, %lu, %lu : %lu, %lu", framePrior, frameInbetween, frameNext, framePriorInput, frameNextInput);
+            CMTimeRangeShow(timeRangePrior);
+            CMTimeRangeShow(timeRangeInbetween);
+            CMTimeRangeShow(timeRangeNext);
+            CMTimeRangeShow(timeRangePriorInput);
+            CMTimeRangeShow(timeRangeNextInput);
+
+
             // Handle first frame special
             if (framePrior == 0)
             {
-                [instructions addObject:[[RSFrameInterpolatorPassthroughInstruction alloc] initWithPassthroughTrackID:priorID
+                [compositionVideoTrackOrigin insertTimeRange:timeRangePriorInput ofTrack:inputVideoTrack atTime:timePrior error:&err];
+                [instructions addObject:[[RSFrameInterpolatorPassthroughInstruction alloc] initWithPassthroughTrackID:originID
                                                                                                          forTimeRange:timeRangePrior]];
             }
 
-            [instructions addObject:[[RSFrameInterpolatorInterpolationInstruction alloc] initWithPriorFrameTrackID:priorID
-                                                                                               andNextFrameTrackID:nextID
+
+            [compositionVideoTrackNext insertTimeRange:timeRangeNextInput
+                                               ofTrack:inputVideoTrack
+                                                atTime:timeInbetween
+                                                 error:&err];
+            [compositionVideoTrackPrior insertTimeRange:timeRangePriorInput
+                                                ofTrack:inputVideoTrack
+                                                 atTime:timeInbetween
+                                                  error:&err];
+
+            [instructions addObject:[[RSFrameInterpolatorInterpolationInstruction alloc] initWithPriorFrameTrackID:nextID
+                                                                                               andNextFrameTrackID:priorID
                                                                                                       forTimeRange:timeRangeInbetween]];
-            [instructions addObject:[[RSFrameInterpolatorPassthroughInstruction alloc] initWithPassthroughTrackID:nextID
+
+
+            [compositionVideoTrackOrigin insertTimeRange:timeRangeNextInput ofTrack:inputVideoTrack atTime:timeNext error:&err];
+            [instructions addObject:[[RSFrameInterpolatorPassthroughInstruction alloc] initWithPassthroughTrackID:originID
                                                                                                      forTimeRange:timeRangeNext]];
         }
     }
+
+    NSLog(@"Debug later");
+    CMTimeRangeShow(compositionVideoTrackOrigin.timeRange);
+    CMTimeRangeShow(compositionVideoTrackNext.timeRange);
+    CMTimeRangeShow(compositionVideoTrackPrior.timeRange);
+
 
     // Add the instructions
     outputVideoComposition.instructions = instructions;
