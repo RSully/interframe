@@ -134,6 +134,34 @@
 
 
 
+
+    // Test create origin track only with 1 instruction:
+    for (NSUInteger frame = 0; frame < inputFrameCount; frame++)
+    {
+        @autoreleasepool {
+
+            NSUInteger frameOutput = frame * 2;
+            NSLog(@"frame %lu (%lu)", frame, frameOutput);
+
+            CMTime timeInput = CMTimeAdd(originTimeRange.start, CMTimeMakeWithSeconds(frame / inputFPS, kRSDurationResolution));
+            CMTimeRange timeRangeInput = CMTimeRangeMake(timeInput, inputFrameDuration);
+            CMTime time = CMTimeAdd(originTimeRange.start, CMTimeMakeWithSeconds(frameOutput / outputFPS, kRSDurationResolution));
+
+            [compositionVideoTrackOrigin insertTimeRange:timeRangeInput ofTrack:inputVideoTrack atTime:time error:&err];
+            if (err) NSLog(@"error %@", err);
+            [compositionVideoTrackOrigin scaleTimeRange:CMTimeRangeMake(time, inputFrameDuration) toDuration:outputFrameDuration];
+        }
+    }
+    CMTimeRangeShow(compositionVideoTrackOrigin.timeRange);
+    RSFrameInterpolatorPassthroughInstruction *ins = [[RSFrameInterpolatorPassthroughInstruction alloc] initWithPassthroughTrackID:originID forTimeRange:originTimeRange];
+    outputVideoComposition.instructions = @[ins];
+    NSLog(@"%@", compositionVideoTrackOrigin.segments);
+    NSLog(@"%@", outputVideoComposition.instructions);
+    return outputVideoComposition;
+
+
+
+
     /*
      * Handle creating timeranges and instructions for output
      */
@@ -204,34 +232,25 @@
     }
 
 
-    NSLog(@"%@", compositionVideoTrackPrior.segments);
-
-    NSLog(@"INS TEST:");
-    CMTime peM2 = CMTimeSubtract(CMTimeSubtract(CMTimeAdd(originTimeRange.start, originTimeRange.duration), outputFrameDuration), outputFrameDuration);
-    CMTimeRange insAtr = CMTimeRangeMake(originTimeRange.start, peM2);
-    CMTimeRange insBtr = CMTimeRangeMake(peM2, outputFrameDuration);
-    CMTimeRange insCtr = CMTimeRangeMake(CMTimeAdd(peM2, outputFrameDuration), outputFrameDuration);
-    CMTimeRangeShow(insAtr);
-    CMTimeRangeShow(insBtr);
-    RSFrameInterpolatorPassthroughInstruction *insA = [[RSFrameInterpolatorPassthroughInstruction alloc] initWithPassthroughTrackID:originID
-                                                                                                                       forTimeRange:insAtr];
-    RSFrameInterpolatorInterpolationInstruction *insB = [[RSFrameInterpolatorInterpolationInstruction alloc] initWithPriorFrameTrackID:priorID
-                                                                                                                   andNextFrameTrackID:nextID
-                                                                                                                          forTimeRange:insBtr];
-    RSFrameInterpolatorPassthroughInstruction *insC = [[RSFrameInterpolatorPassthroughInstruction alloc] initWithPassthroughTrackID:originID
-                                                                                                                       forTimeRange:insCtr];
-    outputVideoComposition.instructions = @[insA, insB, insC];
-    return outputVideoComposition;
 
 
-//    NSLog(@"Debug later");
-//    NSLog(@"%@", instructions);
-//    CMTimeRangeShow(compositionVideoTrackOrigin.timeRange);
-//    NSLog(@"%@", compositionVideoTrackOrigin.segments);
-//    CMTimeRangeShow(compositionVideoTrackNext.timeRange);
-//    NSLog(@"%@", compositionVideoTrackNext.segments);
-//    CMTimeRangeShow(compositionVideoTrackPrior.timeRange);
-//    NSLog(@"%@", compositionVideoTrackPrior.segments);
+    // Test instructions for video composition using created tracks:
+//    CMTime peM2 = CMTimeSubtract(CMTimeSubtract(CMTimeAdd(originTimeRange.start, originTimeRange.duration), outputFrameDuration), outputFrameDuration);
+//    CMTimeRange insAtr = CMTimeRangeMake(originTimeRange.start, peM2);
+//    CMTimeRange insBtr = CMTimeRangeMake(peM2, outputFrameDuration);
+//    CMTimeRange insCtr = CMTimeRangeMake(CMTimeAdd(peM2, outputFrameDuration), outputFrameDuration);
+//    CMTimeRangeShow(insAtr);
+//    CMTimeRangeShow(insBtr);
+//    RSFrameInterpolatorPassthroughInstruction *insA = [[RSFrameInterpolatorPassthroughInstruction alloc] initWithPassthroughTrackID:originID
+//                                                                                                                       forTimeRange:insAtr];
+//    RSFrameInterpolatorInterpolationInstruction *insB = [[RSFrameInterpolatorInterpolationInstruction alloc] initWithPriorFrameTrackID:priorID
+//                                                                                                                   andNextFrameTrackID:nextID
+//                                                                                                                          forTimeRange:insBtr];
+//    RSFrameInterpolatorPassthroughInstruction *insC = [[RSFrameInterpolatorPassthroughInstruction alloc] initWithPassthroughTrackID:originID
+//                                                                                                                       forTimeRange:insCtr];
+//    outputVideoComposition.instructions = @[insA, insB, insC];
+//    return outputVideoComposition;
+
 
 
     // Add the instructions
@@ -246,12 +265,12 @@
     AVAssetTrack *videoTrack = [self.inputAsset tracksWithMediaType:AVMediaTypeVideo][0];
 
     AVMutableComposition *outputComposition = [self buildComposition];
+    NSLog(@"Built composition!");
     AVMutableVideoComposition *outputVideoComposition = [self buildVideoCompositionForComposition:outputComposition
                                                                                     andVideoTrack:videoTrack];
-    NSLog(@"Built composition!");
+    NSLog(@"Built video composition!");
 
 
-//    NSLog(@"%@", [AVAssetExportSession exportPresetsCompatibleWithAsset:self.outputComposition]);
 
     self.exportSession = [[AVAssetExportSession alloc] initWithAsset:outputComposition
                                                           presetName:AVAssetExportPresetAppleM4VWiFi];
@@ -261,10 +280,10 @@
     self.exportSession.outputURL = self.outputUrl;
 
     NSLog(@"Begin export");
-
     [self.exportSession exportAsynchronouslyWithCompletionHandler:^{
         NSLog(@"Export completion, %ld", self.exportSession.status);
         NSLog(@"%@, %@", self.exportSession, outputVideoComposition);
+
         switch (self.exportSession.status)
         {
             case AVAssetExportSessionStatusCancelled:
@@ -272,7 +291,6 @@
                 break;
             case AVAssetExportSessionStatusFailed:
                 NSLog(@".. failed: %@", self.exportSession.error);
-                NSLog(@"Errors: %@, %@", @(GetMacOSStatusErrorString(-12500)), @(GetMacOSStatusCommentString(-12500)));
                 break;
         }
 
