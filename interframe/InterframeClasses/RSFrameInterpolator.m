@@ -84,7 +84,7 @@
     Float64 inputFPS = inputVideoTrack.nominalFrameRate;
     NSUInteger inputFrameCount = round(inputFPS * inputDuration);
     Float64 inputFrameDurationSeconds = 1.0 / inputFPS;
-//    CMTime inputFrameDuration = CMTimeMakeWithSeconds(inputFrameDurationSeconds, kRSDurationResolution);
+    CMTime inputFrameDuration = CMTimeMakeWithSeconds(inputFrameDurationSeconds, kRSDurationResolution);
 
     // Calculate expected output metadata
     NSUInteger outputFrameCount = (inputFrameCount * 2) - 1;
@@ -141,6 +141,7 @@
 
     NSMutableArray *instructions = [NSMutableArray arrayWithCapacity:outputFrameCount];
 
+
     for (NSUInteger frame = 0; frame < inputFrameCount; frame++)
     {
         @autoreleasepool {
@@ -196,10 +197,23 @@
         }
     }
 
+//    NSLog(@"INS TEST:");
+//    CMTime peM2 = CMTimeSubtract(CMTimeSubtract(CMTimeAdd(originTimeRange.start, originTimeRange.duration), outputFrameDuration), outputFrameDuration);
+//    CMTimeRange insAtr = CMTimeRangeMake(originTimeRange.start, peM2);
+//    CMTimeRange insBtr = CMTimeRangeMake(peM2, CMTimeAdd(outputFrameDuration, outputFrameDuration));
+//    CMTimeRangeShow(insAtr);
+//    CMTimeRangeShow(insBtr);
+//    RSFrameInterpolatorPassthroughInstruction *insA = [[RSFrameInterpolatorPassthroughInstruction alloc] initWithPassthroughTrackID:originID
+//                                                                                                                       forTimeRange:insAtr];
+//    RSFrameInterpolatorInterpolationInstruction *insB = [[RSFrameInterpolatorInterpolationInstruction alloc] initWithPriorFrameTrackID:priorID
+//                                                                                                                   andNextFrameTrackID:nextID
+//                                                                                                                          forTimeRange:insBtr];
+//    outputVideoComposition.instructions = @[insA, insB];
+//    return outputVideoComposition;
 
 
-    NSLog(@"%@", instructions);
 //    NSLog(@"Debug later");
+//    NSLog(@"%@", instructions);
 //    CMTimeRangeShow(compositionVideoTrackOrigin.timeRange);
 //    NSLog(@"%@", compositionVideoTrackOrigin.segments);
 //    CMTimeRangeShow(compositionVideoTrackNext.timeRange);
