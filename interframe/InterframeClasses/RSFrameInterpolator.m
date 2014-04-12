@@ -128,13 +128,9 @@
     originTimeRange.start = CMTimeConvertScale(originTimeRange.start, kRSDurationResolution, kCMTimeRoundingMethod_Default);
     originTimeRange.duration = CMTimeConvertScale(originTimeRange.duration, kRSDurationResolution, kCMTimeRoundingMethod_Default);
 
-    CMTimeRange nextTimeRange = CMTimeRangeMake(originTimeRange.start, CMTimeSubtract(originTimeRange.duration, outputFrameDuration));
-    CMTimeRange priorTimeRange = CMTimeRangeMake(CMTimeAdd(originTimeRange.start, outputFrameDuration), CMTimeSubtract(originTimeRange.duration, outputFrameDuration));
 
     NSLog(@"DEBUG:");
     CMTimeRangeShow(originTimeRange);
-    CMTimeRangeShow(nextTimeRange);
-    CMTimeRangeShow(priorTimeRange);
 
 
 
@@ -148,30 +144,13 @@
     for (NSUInteger frame = 0; frame < inputFrameCount; frame++)
     {
         @autoreleasepool {
-            NSLog(@"frame %lu", frame);
 
             NSUInteger frameOutput = frame * 2;
             CMTimeRange timeRangeInput = CMTimeRangeMake(CMTimeAdd(originTimeRange.start, CMTimeMakeWithSeconds(frame / inputFPS, kRSDurationResolution)), outputFrameDuration);
+            NSLog(@"frame %lu (%lu)", frame, frameOutput);
 
-
-            // write to origin
-            CMTime time = CMTimeAdd(originTimeRange.start, CMTimeMakeWithSeconds(frameOutput / outputFPS, kRSDurationResolution));
-            [compositionVideoTrackOrigin insertTimeRange:timeRangeInput ofTrack:inputVideoTrack atTime:time error:&err];
-
-            CMTimeRange timeRange = CMTimeRangeMake(time, outputFrameDuration);
-            [instructions addObject:[[RSFrameInterpolatorPassthroughInstruction alloc] initWithPassthroughTrackID:originID
-                                                                                                     forTimeRange:timeRange]];
-
-
-            // if not last, write to next
-            if (frame + 1 < inputFrameCount)
-            {
-                NSUInteger frameNextOutput = frameOutput + 1;
-                time = CMTimeAdd(originTimeRange.start, CMTimeMakeWithSeconds(frameNextOutput / outputFPS, kRSDurationResolution));
-
-                [compositionVideoTrackNext insertTimeRange:timeRangeInput ofTrack:inputVideoTrack atTime:time error:&err];
-                if (err) NSLog(@"error %@", err);
-            }
+            CMTime time;
+            CMTimeRange timeRange;
 
 
             // if not first, write to prior
@@ -191,15 +170,42 @@
                                                                                                           forTimeRange:timeRange]];
             }
 
+
+            // write to origin
+            {
+                time = CMTimeAdd(originTimeRange.start, CMTimeMakeWithSeconds(frameOutput / outputFPS, kRSDurationResolution));
+                [compositionVideoTrackOrigin insertTimeRange:timeRangeInput ofTrack:inputVideoTrack atTime:time error:&err];
+                if (err) NSLog(@"error %@", err);
+
+                timeRange = CMTimeRangeMake(time, outputFrameDuration);
+                [instructions addObject:[[RSFrameInterpolatorPassthroughInstruction alloc] initWithPassthroughTrackID:originID
+                                                                                                         forTimeRange:timeRange]];
+            }
+
+
+            // if not last, write to next
+            if (frame + 1 < inputFrameCount)
+            {
+                NSUInteger frameNextOutput = frameOutput + 1;
+                time = CMTimeAdd(originTimeRange.start, CMTimeMakeWithSeconds(frameNextOutput / outputFPS, kRSDurationResolution));
+
+                [compositionVideoTrackNext insertTimeRange:timeRangeInput ofTrack:inputVideoTrack atTime:time error:&err];
+                if (err) NSLog(@"error %@", err);
+            }
+
         }
     }
 
 
 
-    NSLog(@"Debug later");
-    CMTimeRangeShow(compositionVideoTrackOrigin.timeRange);
-    CMTimeRangeShow(compositionVideoTrackNext.timeRange);
-    CMTimeRangeShow(compositionVideoTrackPrior.timeRange);
+    NSLog(@"%@", instructions);
+//    NSLog(@"Debug later");
+//    CMTimeRangeShow(compositionVideoTrackOrigin.timeRange);
+//    NSLog(@"%@", compositionVideoTrackOrigin.segments);
+//    CMTimeRangeShow(compositionVideoTrackNext.timeRange);
+//    NSLog(@"%@", compositionVideoTrackNext.segments);
+//    CMTimeRangeShow(compositionVideoTrackPrior.timeRange);
+//    NSLog(@"%@", compositionVideoTrackPrior.segments);
 
 
     // Add the instructions
