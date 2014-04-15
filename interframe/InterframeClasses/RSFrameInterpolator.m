@@ -270,7 +270,7 @@
                                                                                     andVideoTrack:videoTrack];
     NSLog(@"Built video composition!");
 
-    BOOL valid = [outputVideoComposition isValidForAsset:outputComposition timeRange:CMTimeRangeMake(kCMTimeZero, kCMTimePositiveInfinity) validationDelegate:self];
+    BOOL valid = [outputVideoComposition isValidForAsset:outputComposition timeRange:videoTrack.timeRange validationDelegate:self];
     NSLog(@"checked validity: %d", valid);
 
 
