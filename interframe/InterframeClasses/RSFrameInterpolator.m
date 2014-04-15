@@ -270,6 +270,8 @@
                                                                                     andVideoTrack:videoTrack];
     NSLog(@"Built video composition!");
 
+    BOOL valid = [outputVideoComposition isValidForAsset:outputComposition timeRange:CMTimeRangeMake(kCMTimeZero, kCMTimePositiveInfinity) validationDelegate:self];
+    NSLog(@"checked validity: %d", valid);
 
 
     self.exportSession = [[AVAssetExportSession alloc] initWithAsset:outputComposition
@@ -296,6 +298,60 @@
 
         [self.delegate interpolatorFinished:self];
     }];
+}
+
+
+#pragma mark - AVVideoCompositionValidationHandling delegate methods
+
+
+/*!
+ @method		videoComposition:shouldContinueValidatingAfterFindingInvalidValueForKey:
+ @abstract
+ Invoked by an instance of AVVideoComposition when validating an instance of AVVideoComposition, to report a key that has an invalid value.
+ @result
+ An indication of whether the AVVideoComposition should continue validation in order to report additional problems that may exist.
+ */
+- (BOOL)videoComposition:(AVVideoComposition *)videoComposition shouldContinueValidatingAfterFindingInvalidValueForKey:(NSString *)key {
+    NSLog(@"invalid value for key: %@", key);
+    return YES;
+}
+
+/*!
+ @method		videoComposition:shouldContinueValidatingAfterFindingEmptyTimeRange:
+ @abstract
+ Invoked by an instance of AVVideoComposition when validating an instance of AVVideoComposition, to report a timeRange that has no corresponding video composition instruction.
+ @result
+ An indication of whether the AVVideoComposition should continue validation in order to report additional problems that may exist.
+ */
+- (BOOL)videoComposition:(AVVideoComposition *)videoComposition shouldContinueValidatingAfterFindingEmptyTimeRange:(CMTimeRange)timeRange {
+    NSLog(@"empty time range: %f, %f", CMTimeGetSeconds(timeRange.start), CMTimeGetSeconds(timeRange.duration));
+    return YES;
+}
+
+/*!
+ @method		videoComposition:shouldContinueValidatingAfterFindingInvalidTimeRangeInInstruction:
+ @abstract
+ Invoked by an instance of AVVideoComposition when validating an instance of AVVideoComposition, to report a video composition instruction with a timeRange that's invalid, that overlaps with the timeRange of a prior instruction, or that contains times earlier than the timeRange of a prior instruction.
+ @discussion
+ Use CMTIMERANGE_IS_INVALID, defined in CMTimeRange.h, to test whether the timeRange itself is invalid. Refer to headerdoc for AVVideoComposition.instructions for a discussion of how timeRanges for instructions must be formulated.
+ @result
+ An indication of whether the AVVideoComposition should continue validation in order to report additional problems that may exist.
+ */
+- (BOOL)videoComposition:(AVVideoComposition *)videoComposition shouldContinueValidatingAfterFindingInvalidTimeRangeInInstruction:(id<AVVideoCompositionInstruction>)videoCompositionInstruction {
+    NSLog(@"invalid time range in instruction: %@", videoCompositionInstruction);
+    return YES;
+}
+
+/*!
+ @method		videoComposition:shouldContinueValidatingAfterFindingInvalidTrackIDInInstruction:layerInstruction:asset:
+ @abstract
+ Invoked by an instance of AVVideoComposition when validating an instance of AVVideoComposition, to report a video composition layer instruction with a trackID that does not correspond either to the trackID used for the composition's animationTool or to a track of the asset specified in -[AVVideoComposition isValidForAsset:timeRange:delegate:].
+ @result
+ An indication of whether the AVVideoComposition should continue validation in order to report additional problems that may exist.
+ */
+- (BOOL)videoComposition:(AVVideoComposition *)videoComposition shouldContinueValidatingAfterFindingInvalidTrackIDInInstruction:(id<AVVideoCompositionInstruction>)videoCompositionInstruction layerInstruction:(AVVideoCompositionLayerInstruction *)layerInstruction asset:(AVAsset *)asset {
+    NSLog(@"invalid trackID in instruction: %@, %@, %@", videoCompositionInstruction, layerInstruction, asset);
+    return YES;
 }
 
 @end

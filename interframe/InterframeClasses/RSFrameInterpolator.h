@@ -17,7 +17,7 @@
 @end
 
 
-@interface RSFrameInterpolator : NSObject
+@interface RSFrameInterpolator : NSObject <AVVideoCompositionValidationHandling>
 
 -(id)initWithAsset:(AVAsset *)asset output:(NSURL *)output compositor:(Class<AVVideoCompositing>)compositor;
 
