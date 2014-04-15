@@ -7,340 +7,351 @@
 //
 
 #import "RSFrameInterpolator.h"
+#import "RSFrameInterpolatorPassthroughInstruction.h"
+#import "RSFrameInterpolatorInterpolationInstruction.h"
 
-#define kRSFIBitmapInfo (kCGBitmapByteOrder32Little | kCGImageAlphaPremultipliedFirst)
-#define kRSFIPixelFormatType kCVPixelFormatType_32BGRA
+//#define kRSDurationResolution 300
+#define kRSDurationResolution NSEC_PER_SEC
+//#define kRSDurationResolution 240
 
 @interface RSFrameInterpolator ()
 
-@property (strong) NSMutableDictionary *defaultPixelSettings;
-
-// Input assets
 @property (strong) AVAsset *inputAsset;
-@property (strong) AVAssetTrack *inputAssetVideoTrack;
-// Input readers
-@property (strong) AVAssetReader *inputAssetVideoReader;
-@property (strong) AVAssetReaderTrackOutput *inputAssetVideoReaderOutput;
-// Input metadata
-@property float inputFPS;
-@property NSUInteger inputFrameCount;
-
-// Output writer
-@property (strong) AVAssetWriter *outputWriter;
-@property (strong) AVAssetWriterInput *outputWriterVideoInput;
-@property (strong) AVAssetWriterInputPixelBufferAdaptor *outputWriterVideoInputAdapter;
-@property (strong) AVAssetWriterInput *outputWriterAudioInput;
-// Output metadata
-@property float outputFPS;
-@property NSUInteger outputFrameCount;
+@property (strong) NSURL *outputUrl;
+@property (strong) AVAssetExportSession *exportSession;
+@property Class<AVVideoCompositing> compositor;
 
 @end
 
 
 @implementation RSFrameInterpolator
 
--(id)initWithAsset:(AVAsset *)asset output:(NSURL *)output {
+-(id)initWithAsset:(AVAsset *)asset output:(NSURL *)output compositor:(Class<AVVideoCompositing>)compositor {
     if ((self = [self init]))
     {
-        NSError *error = nil;
-
-        self.defaultPixelSettings = [NSMutableDictionary dictionary];
-        self.defaultPixelSettings[(NSString *)kCVPixelBufferPixelFormatTypeKey] = @(kRSFIPixelFormatType);
-
-
         self.inputAsset = asset;
-
-        // Setup input metadata
-        self.inputAssetVideoTrack = [self.inputAsset tracksWithMediaType:AVMediaTypeVideo][0];
-        self.inputFPS = self.inputAssetVideoTrack.nominalFrameRate;
-        self.inputFrameCount = round(self.inputFPS * CMTimeGetSeconds(self.inputAsset.duration));
-
-        // Calculate expected output metadata
-        self.outputFPS = self.inputFPS * 2.0;
-        self.outputFrameCount = (self.inputFrameCount * 2.0) - 1;
-
-
-        // Setup input reader
-        self.inputAssetVideoReader = [[AVAssetReader alloc] initWithAsset:self.inputAsset error:&error];
-        if (error)
-        {
-            // TODO: better error system
-            @throw [NSException exceptionWithName:@"RSFIException" reason:@"Failed to instantiate inputAssetVideoReader" userInfo:@{@"error": error}];
-        }
-        self.inputAssetVideoReaderOutput = [AVAssetReaderTrackOutput assetReaderTrackOutputWithTrack:self.inputAssetVideoTrack
-                                                                                      outputSettings:self.defaultPixelSettings];
-        [self.inputAssetVideoReader addOutput:self.inputAssetVideoReaderOutput];
-
-
-        // Setup output writer
-        NSString *fileType = CFBridgingRelease(UTTypeCreatePreferredIdentifierForTag(kUTTagClassFilenameExtension, (__bridge CFStringRef)([output pathExtension]), NULL));
-        self.outputWriter = [[AVAssetWriter alloc] initWithURL:output fileType:fileType error:&error];
-        self.outputWriter.movieTimeScale = NSEC_PER_SEC;
-
-        NSDictionary *outputSettings = @{
-                                         AVVideoCodecKey: AVVideoCodecH264,
-                                         AVVideoHeightKey: @(self.inputAssetVideoTrack.naturalSize.height),
-                                         AVVideoWidthKey: @(self.inputAssetVideoTrack.naturalSize.width),
-//                                         AVVideoCompressionPropertiesKey: @{
-//                                                 AVVideoProfileLevelKey: AVVideoProfileLevelH264High41,
-//                                                 AVVideoAverageBitRateKey: @(5000)
-//                                                 }
-                                         };
-        self.defaultPixelSettings[(NSString *)kCVPixelBufferWidthKey] = @(self.inputAssetVideoTrack.naturalSize.width);
-        self.defaultPixelSettings[(NSString *)kCVPixelBufferHeightKey] = @(self.inputAssetVideoTrack.naturalSize.height);
-        self.defaultPixelSettings[(NSString *)kCVPixelBufferCGBitmapContextCompatibilityKey] = @(YES);
-        self.defaultPixelSettings[(NSString *)kCVPixelBufferCGImageCompatibilityKey] = @(YES);
-
-        self.outputWriterVideoInput = [[AVAssetWriterInput alloc] initWithMediaType:AVMediaTypeVideo outputSettings:outputSettings];
-        self.outputWriterVideoInputAdapter = [[AVAssetWriterInputPixelBufferAdaptor alloc] initWithAssetWriterInput:self.outputWriterVideoInput
-                                                                                   sourcePixelBufferAttributes:self.defaultPixelSettings];
-        [self.outputWriter addInput:self.outputWriterVideoInput];
+        self.outputUrl = output;
+        self.compositor = compositor;
     }
     return self;
 }
 
 
--(CGImageRef)newInterpolatedImageFromPrior:(CGImageRef)imagePrior andNext:(CGImageRef)imageNext
-                                  forFrame:(NSUInteger)frame frameCount:(NSUInteger)frameCount {
-    if (!self.delegate) return NULL;
+-(AVMutableComposition *)buildComposition {
 
-    RSFrameInterpolationState *state = [[RSFrameInterpolationState alloc] initWithPriorImage:imagePrior nextImage:imageNext
-                                                                                       frame:frame frameCount:frameCount];
-    return [self.source newInterpolatedImageForInterpolator:self withState:state];
+    AVMutableComposition *outputComposition = [AVMutableComposition composition];
+
+    /*
+     * Handle prepping composition
+     */
+
+    NSMutableArray *inputVideoTracks = [NSMutableArray array];
+
+    // Copy any tracks that aren't video
+    for (AVAssetTrack *inputTrack in self.inputAsset.tracks)
+    {
+        if ([inputTrack.mediaType isEqualToString:AVMediaTypeVideo])
+        {
+            [inputVideoTracks addObject:inputTrack];
+            continue;
+        }
+
+        AVMutableCompositionTrack *outputTrack = [outputComposition addMutableTrackWithMediaType:inputTrack.mediaType preferredTrackID:inputTrack.trackID];
+
+        NSError *err = nil;
+        [outputTrack insertTimeRange:inputTrack.timeRange
+                             ofTrack:inputTrack
+                              atTime:inputTrack.timeRange.start
+                               error:&err];
+        if (err)
+        {
+            NSLog(@"Failed to copy track %@ into output composition", inputTrack);
+        }
+    }
+
+    return outputComposition;
 }
 
--(void)interpolate {
+-(AVMutableVideoComposition *)buildVideoCompositionForComposition:(AVMutableComposition*)composition
+                                                    andVideoTrack:(AVAssetTrack *)inputVideoTrack {
 
-    BOOL readingOK = [self.inputAssetVideoReader startReading];
-    if (!readingOK)
+    /**
+     * Metadata
+     */
+
+    // Calculate input metadata
+    Float64 inputDuration = CMTimeGetSeconds(inputVideoTrack.timeRange.duration);
+    Float64 inputFPS = inputVideoTrack.nominalFrameRate;
+    NSUInteger inputFrameCount = round(inputFPS * inputDuration);
+    Float64 inputFrameDurationSeconds = 1.0 / inputFPS;
+    CMTime inputFrameDuration = CMTimeMakeWithSeconds(inputFrameDurationSeconds, kRSDurationResolution);
+
+    // Calculate expected output metadata
+    NSUInteger outputFrameCount = (inputFrameCount * 2) - 1;
+    Float64 outputFPS = outputFrameCount / inputDuration;
+    Float64 outputFrameDurationSeconds = 1.0 / outputFPS;
+    CMTime outputFrameDuration = CMTimeMakeWithSeconds(outputFrameDurationSeconds, kRSDurationResolution);
+
+    CMTimeShow(outputFrameDuration);
+    NSLog(@"inputDuration: %f, inputFrameDuration = %f, inputFPS: %f, inputFrameCount: %lu", inputDuration, inputFrameDurationSeconds, inputFPS, inputFrameCount);
+    NSLog(@"outputDuration: %f, outputFrameDuration = %f, outputFPS: %f, outputFrameCount: %lu", outputFrameDurationSeconds * outputFrameCount, outputFrameDurationSeconds, outputFPS, outputFrameCount);
+
+
+    /**
+     * Video composition
+     */
+
+    AVMutableVideoComposition *outputVideoComposition = [AVMutableVideoComposition videoCompositionWithPropertiesOfAsset:inputVideoTrack.asset];
+    outputVideoComposition.customVideoCompositorClass = self.compositor;
+    outputVideoComposition.frameDuration = outputFrameDuration;
+
+    /**
+     * Create video tracks
+     */
+
+    NSError *err = nil;
+    AVMutableCompositionTrack *compositionVideoTrackPrior, *compositionVideoTrackNext, *compositionVideoTrackOrigin;
+
+    compositionVideoTrackPrior = [composition addMutableTrackWithMediaType:AVMediaTypeVideo
+                                                          preferredTrackID:kCMPersistentTrackID_Invalid];
+    compositionVideoTrackNext = [composition addMutableTrackWithMediaType:AVMediaTypeVideo
+                                                         preferredTrackID:kCMPersistentTrackID_Invalid];
+    compositionVideoTrackOrigin = [composition addMutableTrackWithMediaType:AVMediaTypeVideo
+                                                           preferredTrackID:kCMPersistentTrackID_Invalid];
+
+    CMPersistentTrackID originID = compositionVideoTrackOrigin.trackID;
+    CMPersistentTrackID nextID = compositionVideoTrackNext.trackID;
+    CMPersistentTrackID priorID = compositionVideoTrackPrior.trackID;
+
+
+    CMTimeRange originTimeRange = inputVideoTrack.timeRange;
+    originTimeRange.start = CMTimeConvertScale(originTimeRange.start, kRSDurationResolution, kCMTimeRoundingMethod_Default);
+    originTimeRange.duration = CMTimeConvertScale(originTimeRange.duration, kRSDurationResolution, kCMTimeRoundingMethod_Default);
+
+
+    NSLog(@"DEBUG:");
+    CMTimeRangeShow(originTimeRange);
+
+
+
+
+    // Test create origin track only with 1 instruction:
+    for (NSUInteger frame = 0; frame < inputFrameCount; frame++)
     {
-        @throw [NSException exceptionWithName:@"RSFIException" reason:@"Failed to read inputAssetVideoReader" userInfo:nil];
+        @autoreleasepool {
+
+            NSUInteger frameOutput = frame * 2;
+            NSLog(@"frame %lu (%lu)", frame, frameOutput);
+
+            CMTime timeInput = CMTimeAdd(originTimeRange.start, CMTimeMakeWithSeconds(frame / inputFPS, kRSDurationResolution));
+            CMTimeRange timeRangeInput = CMTimeRangeMake(timeInput, inputFrameDuration);
+            CMTime time = CMTimeAdd(originTimeRange.start, CMTimeMakeWithSeconds(frameOutput / outputFPS, kRSDurationResolution));
+
+            [compositionVideoTrackOrigin insertTimeRange:timeRangeInput ofTrack:inputVideoTrack atTime:time error:&err];
+            if (err) NSLog(@"error %@", err);
+            [compositionVideoTrackOrigin scaleTimeRange:CMTimeRangeMake(time, inputFrameDuration) toDuration:outputFrameDuration];
+        }
     }
-    BOOL writingOK = [self.outputWriter startWriting];
-    if (!writingOK)
+    CMTimeRangeShow(compositionVideoTrackOrigin.timeRange);
+    RSFrameInterpolatorPassthroughInstruction *ins = [[RSFrameInterpolatorPassthroughInstruction alloc] initWithPassthroughTrackID:originID forTimeRange:originTimeRange];
+    outputVideoComposition.instructions = @[ins];
+    NSLog(@"%@", compositionVideoTrackOrigin.segments);
+    NSLog(@"%@", outputVideoComposition.instructions);
+    return outputVideoComposition;
+
+
+
+
+    /*
+     * Handle creating timeranges and instructions for output
+     */
+
+
+    NSMutableArray *instructions = [NSMutableArray arrayWithCapacity:outputFrameCount];
+
+
+    for (NSUInteger frame = 0; frame < inputFrameCount; frame++)
     {
-        @throw [NSException exceptionWithName:@"RSFIException" reason:@"Failed to write outputWriter" userInfo:nil];
-    }
-    [self.outputWriter startSessionAtSourceTime:kCMTimeZero];
+        @autoreleasepool {
 
-    NSUInteger framePrior, frameInbetween, frameNext;
-    CMSampleBufferRef sampleBufferPrior = NULL, sampleBufferNext = NULL;
-    CVPixelBufferRef pixelBufferPrior = NULL, pixelBufferInbetween = NULL, pixelBufferNext = NULL;
-    CGImageRef imagePrior = NULL, imageInbetween = NULL, imageNext = NULL;
-    CMTime timePrior, timeInbetween, timeNext;
+            NSUInteger frameOutput = frame * 2;
+            NSLog(@"frame %lu (%lu)", frame, frameOutput);
 
-    // expr         explain                 output      input
-    // -----------------------------------------------------------
-    // frame - 2 = first source frame   // 0 2 4    // 0 1 2
-    // frame - 1 = inbetween frame      // 1 3 5    //
-    // frame - 0 = last source frame    // 2 4 6    // 1 2 3
-    // -----------------------------------------------------------
-    for (NSUInteger frame = 2; frame <= self.outputFrameCount; frame += 2)
-    {
-        @autoreleasepool
-        {
+            CMTime timeInput = CMTimeAdd(originTimeRange.start, CMTimeMakeWithSeconds(frame / inputFPS, kRSDurationResolution));
+            CMTimeRange timeRangeInput = CMTimeRangeMake(timeInput, inputFrameDuration);
 
-            // Frame numbers for output
-            framePrior = frame - 2;
-            frameInbetween = frame - 1;
-            frameNext = frame;
-
-            // Frame times
-            timePrior = CMTimeMakeWithSeconds(framePrior / self.outputFPS, NSEC_PER_SEC);
-            timeInbetween = CMTimeMakeWithSeconds(frameInbetween / self.outputFPS, NSEC_PER_SEC);
-            timeNext = CMTimeMakeWithSeconds(frameNext / self.outputFPS, NSEC_PER_SEC);
+            CMTime time;
+            CMTimeRange timeRange;
 
 
-            // Handle first frame special
-            if (framePrior == 0)
+            // if not first, write to next
+            if (frame > 0)
             {
-                NSLog(@"---- FIRST FRAME");
+                NSUInteger framePriorOutput = frameOutput - 1;
+                time = CMTimeAdd(originTimeRange.start, CMTimeMakeWithSeconds(framePriorOutput / outputFPS, kRSDurationResolution));
 
-                sampleBufferPrior = [self.inputAssetVideoReaderOutput copyNextSampleBuffer];
-                pixelBufferPrior = CMSampleBufferGetImageBuffer(sampleBufferPrior);
-                imagePrior = [self newCGImageFromPixelBuffer:pixelBufferPrior];
+                [compositionVideoTrackNext insertTimeRange:timeRangeInput ofTrack:inputVideoTrack atTime:time error:&err];
+                if (err) NSLog(@"error %@", err);
+                [compositionVideoTrackNext scaleTimeRange:CMTimeRangeMake(time, inputFrameDuration) toDuration:outputFrameDuration];
 
 
-                // We don't want to duplicate writes, so do it here
-                NSLog(@"Appending first frame (%f)", CMTimeGetSeconds(timePrior));
-
-                // This seems to work to append first frame
-                // The commented code below doesn't.
-                CVPixelBufferRef testPixelBufferPrior = [self newPixelBufferFromCGImage:imagePrior];
-                [self lazilyAppendPixelBuffer:testPixelBufferPrior withPresentationTime:timePrior];
-
-    //            [self lazilyAppendPixelBuffer:pixelBufferPrior withPresentationTime:timePrior];
-
-                // Cleanup from here
-                CVPixelBufferRelease(testPixelBufferPrior), testPixelBufferPrior = NULL;
-                CFRelease(sampleBufferPrior), sampleBufferPrior = NULL;
+                // We'll be responsible for adding the interpolation instruction here
+                timeRange = CMTimeRangeMake(time, outputFrameDuration);
+                [instructions addObject:[[RSFrameInterpolatorInterpolationInstruction alloc] initWithPriorFrameTrackID:priorID
+                                                                                                   andNextFrameTrackID:nextID
+                                                                                                          forTimeRange:timeRange]];
             }
 
-            sampleBufferNext = [self.inputAssetVideoReaderOutput copyNextSampleBuffer];
-            pixelBufferNext = CMSampleBufferGetImageBuffer(sampleBufferNext);
-            imageNext = [self newCGImageFromPixelBuffer:pixelBufferNext];
 
-
-            imageInbetween = [self newInterpolatedImageFromPrior:imagePrior andNext:imageNext
-                                                        forFrame:frameInbetween frameCount:self.outputFrameCount];
-            pixelBufferInbetween = [self newPixelBufferFromCGImage:imageInbetween];
-            if (!pixelBufferInbetween)
+            // write to origin
             {
-                NSLog(@"Failed to create pixel buffer from imageInbetween");
+                time = CMTimeAdd(originTimeRange.start, CMTimeMakeWithSeconds(frameOutput / outputFPS, kRSDurationResolution));
+
+                [compositionVideoTrackOrigin insertTimeRange:timeRangeInput ofTrack:inputVideoTrack atTime:time error:&err];
+                if (err) NSLog(@"error %@", err);
+                [compositionVideoTrackOrigin scaleTimeRange:CMTimeRangeMake(time, inputFrameDuration) toDuration:outputFrameDuration];
+
+                timeRange = CMTimeRangeMake(time, outputFrameDuration);
+                [instructions addObject:[[RSFrameInterpolatorPassthroughInstruction alloc] initWithPassthroughTrackID:originID
+                                                                                                         forTimeRange:timeRange]];
             }
-            else
+
+
+            // if not last, write to prior
+            if (frame + 1 < inputFrameCount)
             {
-                NSLog(@"Appending inbetween frame (%f)", CMTimeGetSeconds(timeInbetween));
-                [self lazilyAppendPixelBuffer:pixelBufferInbetween withPresentationTime:timeInbetween];
+                NSUInteger frameNextOutput = frameOutput + 1;
+                time = CMTimeAdd(originTimeRange.start, CMTimeMakeWithSeconds(frameNextOutput / outputFPS, kRSDurationResolution));
+
+                [compositionVideoTrackPrior insertTimeRange:timeRangeInput ofTrack:inputVideoTrack atTime:time error:&err];
+                if (err) NSLog(@"error %@", err);
+                [compositionVideoTrackPrior scaleTimeRange:CMTimeRangeMake(time, inputFrameDuration) toDuration:outputFrameDuration];
             }
-            NSLog(@"Appending next frame (%f)", CMTimeGetSeconds(timeNext));
-            [self lazilyAppendPixelBuffer:pixelBufferNext withPresentationTime:timeNext];
-
-
-
-            // Cleanup
-            CVPixelBufferRelease(pixelBufferInbetween), pixelBufferInbetween = NULL;
-            CGImageRelease(imageInbetween), imageInbetween = NULL;
-            CGImageRelease(imagePrior), imagePrior = NULL;
-            CFRelease(sampleBufferNext), sampleBufferNext = NULL;
-            // We need to keep this around to generate the next inbetween
-            imagePrior = imageNext;
 
         }
     }
 
-    if (imagePrior) {
-        CGImageRelease(imagePrior), imagePrior = NULL;
-    }
 
-    NSLog(@"Going to finish writing...");
-    [self.outputWriterVideoInput markAsFinished];
-    [self.outputWriter finishWritingWithCompletionHandler:^{
-        NSLog(@"Finished writing");
+
+
+    // Test instructions for video composition using created tracks:
+//    CMTime peM2 = CMTimeSubtract(CMTimeSubtract(CMTimeAdd(originTimeRange.start, originTimeRange.duration), outputFrameDuration), outputFrameDuration);
+//    CMTimeRange insAtr = CMTimeRangeMake(originTimeRange.start, peM2);
+//    CMTimeRange insBtr = CMTimeRangeMake(peM2, outputFrameDuration);
+//    CMTimeRange insCtr = CMTimeRangeMake(CMTimeAdd(peM2, outputFrameDuration), outputFrameDuration);
+//    CMTimeRangeShow(insAtr);
+//    CMTimeRangeShow(insBtr);
+//    RSFrameInterpolatorPassthroughInstruction *insA = [[RSFrameInterpolatorPassthroughInstruction alloc] initWithPassthroughTrackID:originID
+//                                                                                                                       forTimeRange:insAtr];
+//    RSFrameInterpolatorInterpolationInstruction *insB = [[RSFrameInterpolatorInterpolationInstruction alloc] initWithPriorFrameTrackID:priorID
+//                                                                                                                   andNextFrameTrackID:nextID
+//                                                                                                                          forTimeRange:insBtr];
+//    RSFrameInterpolatorPassthroughInstruction *insC = [[RSFrameInterpolatorPassthroughInstruction alloc] initWithPassthroughTrackID:originID
+//                                                                                                                       forTimeRange:insCtr];
+//    outputVideoComposition.instructions = @[insA, insB, insC];
+//    return outputVideoComposition;
+
+
+
+    // Add the instructions
+    outputVideoComposition.instructions = instructions;
+
+    return outputVideoComposition;
+}
+
+
+-(void)interpolate {
+
+    AVAssetTrack *videoTrack = [self.inputAsset tracksWithMediaType:AVMediaTypeVideo][0];
+
+    AVMutableComposition *outputComposition = [self buildComposition];
+    NSLog(@"Built composition!");
+    AVMutableVideoComposition *outputVideoComposition = [self buildVideoCompositionForComposition:outputComposition
+                                                                                    andVideoTrack:videoTrack];
+    NSLog(@"Built video composition!");
+
+    BOOL valid = [outputVideoComposition isValidForAsset:outputComposition timeRange:videoTrack.timeRange validationDelegate:self];
+    NSLog(@"checked validity: %d", valid);
+
+
+    self.exportSession = [[AVAssetExportSession alloc] initWithAsset:outputComposition
+                                                          presetName:AVAssetExportPresetAppleM4VWiFi];
+    self.exportSession.videoComposition = outputVideoComposition;
+
+    self.exportSession.outputFileType = CFBridgingRelease(UTTypeCreatePreferredIdentifierForTag(kUTTagClassFilenameExtension, (__bridge CFStringRef)self.outputUrl.pathExtension, NULL));
+    self.exportSession.outputURL = self.outputUrl;
+
+    NSLog(@"Begin export");
+    [self.exportSession exportAsynchronouslyWithCompletionHandler:^{
+        NSLog(@"Export completion, %ld", self.exportSession.status);
+        NSLog(@"%@, %@", self.exportSession, outputVideoComposition);
+
+        switch (self.exportSession.status)
+        {
+            case AVAssetExportSessionStatusCancelled:
+                NSLog(@".. canceled");
+                break;
+            case AVAssetExportSessionStatusFailed:
+                NSLog(@".. failed: %@", self.exportSession.error);
+                break;
+        }
+
         [self.delegate interpolatorFinished:self];
-        // TODO: ?
     }];
-
 }
 
--(void)lazilyAppendPixelBuffer:(CVPixelBufferRef)pixelBuffer withPresentationTime:(CMTime)presentationTime {
-    while (!self.outputWriterVideoInput.readyForMoreMediaData) {
-        [NSThread sleepForTimeInterval:0.005];
-    }
 
-    BOOL result = [self.outputWriterVideoInputAdapter appendPixelBuffer:pixelBuffer withPresentationTime:presentationTime];
-    if (!result)
-    {
-        NSLog(@"failed to append pixel buffer %@", self.outputWriter.error);
-    }
-}
--(void)lazilyAppendPixelBufferAsSampleBuffer:(CVPixelBufferRef)pixelBuffer withPresentationTime:(CMTime)presentationTime {
-    CMSampleBufferRef sampleBuffer = NULL;
-    CMVideoFormatDescriptionRef formatDescription = NULL;
+#pragma mark - AVVideoCompositionValidationHandling delegate methods
 
-    CMSampleTimingInfo *sampleTiming = malloc(sizeof(CMSampleTimingInfo));
-    sampleTiming->decodeTimeStamp = kCMTimeInvalid;
-    sampleTiming->duration = CMTimeMakeWithSeconds(1 / self.outputFPS, NSEC_PER_SEC);
-    sampleTiming->presentationTimeStamp = presentationTime;
 
-    OSStatus fStatus = CMVideoFormatDescriptionCreateForImageBuffer(NULL, pixelBuffer, &formatDescription);
-    if (fStatus != 0)
-    {
-        NSLog(@"fStatus %d", fStatus);
-    }
-    OSStatus sStatus = CMSampleBufferCreateForImageBuffer(NULL, pixelBuffer, YES, NULL, NULL, formatDescription, sampleTiming, &sampleBuffer);
-    if (sStatus != 0)
-    {
-        NSLog(@"sStatus %d", sStatus);
-    }
-
-    [self lazilyAppendSampleBuffer:sampleBuffer];
-
-    free(sampleTiming);
-}
--(void)lazilyAppendSampleBuffer:(CMSampleBufferRef)sampleBuffer {
-    while (!self.outputWriterVideoInput.readyForMoreMediaData) {
-        [NSThread sleepForTimeInterval:0.01];
-    }
-
-    BOOL result = [self.outputWriterVideoInput appendSampleBuffer:sampleBuffer];
-    if (!result)
-    {
-        NSLog(@"failed to append sample buffer %@", self.outputWriter.error);
-    }
-}
-
-/**
- * Create a CGImage from a CVPixelBuffer
- * This may only work on 32BGRA sources
- *
- * Some logic from: http://stackoverflow.com/questions/3305862/uiimage-created-from-cmsamplebufferref-not-displayed-in-uiimageview
+/*!
+ @method		videoComposition:shouldContinueValidatingAfterFindingInvalidValueForKey:
+ @abstract
+ Invoked by an instance of AVVideoComposition when validating an instance of AVVideoComposition, to report a key that has an invalid value.
+ @result
+ An indication of whether the AVVideoComposition should continue validation in order to report additional problems that may exist.
  */
--(CGImageRef)newCGImageFromPixelBuffer:(CVPixelBufferRef)pixelBuffer {
-    CVPixelBufferLockBaseAddress(pixelBuffer, 0);
-
-    CGContextRef context = [self newContextFromPixelBuffer:pixelBuffer];
-
-    // Fetch the image
-    CGImageRef image = CGBitmapContextCreateImage(context);
-
-    // Cleanup
-    CGContextRelease(context);
-    CVPixelBufferUnlockBaseAddress(pixelBuffer, 0);
-
-    return image;
+- (BOOL)videoComposition:(AVVideoComposition *)videoComposition shouldContinueValidatingAfterFindingInvalidValueForKey:(NSString *)key {
+    NSLog(@"invalid value for key: %@", key);
+    return YES;
 }
-/**
- * Create a CVPixelBuffer from a CGImage
+
+/*!
+ @method		videoComposition:shouldContinueValidatingAfterFindingEmptyTimeRange:
+ @abstract
+ Invoked by an instance of AVVideoComposition when validating an instance of AVVideoComposition, to report a timeRange that has no corresponding video composition instruction.
+ @result
+ An indication of whether the AVVideoComposition should continue validation in order to report additional problems that may exist.
  */
--(CVPixelBufferRef)newPixelBufferFromCGImage:(CGImageRef)image {
-    CVPixelBufferRef pixelBuffer = [self newPixelBuffer];
-    if (!pixelBuffer)
-    {
-        return NULL;
-    }
-
-    CVPixelBufferLockBaseAddress(pixelBuffer, 0);
-
-    CGContextRef context = [self newContextFromPixelBuffer:pixelBuffer];
-
-    // Draw the image onto pixelBuffer
-    CGContextDrawImage(context, CGRectMake(0, 0, CGImageGetWidth(image), CGImageGetHeight(image)), image);
-
-    CGContextRelease(context);
-    CVPixelBufferUnlockBaseAddress(pixelBuffer, 0);
-
-    return pixelBuffer;
+- (BOOL)videoComposition:(AVVideoComposition *)videoComposition shouldContinueValidatingAfterFindingEmptyTimeRange:(CMTimeRange)timeRange {
+    NSLog(@"empty time range: %f, %f", CMTimeGetSeconds(timeRange.start), CMTimeGetSeconds(timeRange.duration));
+    return YES;
 }
 
--(CGContextRef)newContextFromPixelBuffer:(CVPixelBufferRef)pixelBuffer {
-    // Get info about image
-    void *baseAddress = CVPixelBufferGetBaseAddress(pixelBuffer);
-    size_t width = CVPixelBufferGetWidth(pixelBuffer);
-    size_t height = CVPixelBufferGetHeight(pixelBuffer);
-    size_t bytesPerRow = CVPixelBufferGetBytesPerRow(pixelBuffer);
-
-    // Using device RGB - is this best?
-    CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
-
-    CGContextRef context = CGBitmapContextCreate(baseAddress, width, height, 8, bytesPerRow, colorSpace, kRSFIBitmapInfo);
-
-    // Cleanup
-    CGColorSpaceRelease(colorSpace);
-
-    return context;
+/*!
+ @method		videoComposition:shouldContinueValidatingAfterFindingInvalidTimeRangeInInstruction:
+ @abstract
+ Invoked by an instance of AVVideoComposition when validating an instance of AVVideoComposition, to report a video composition instruction with a timeRange that's invalid, that overlaps with the timeRange of a prior instruction, or that contains times earlier than the timeRange of a prior instruction.
+ @discussion
+ Use CMTIMERANGE_IS_INVALID, defined in CMTimeRange.h, to test whether the timeRange itself is invalid. Refer to headerdoc for AVVideoComposition.instructions for a discussion of how timeRanges for instructions must be formulated.
+ @result
+ An indication of whether the AVVideoComposition should continue validation in order to report additional problems that may exist.
+ */
+- (BOOL)videoComposition:(AVVideoComposition *)videoComposition shouldContinueValidatingAfterFindingInvalidTimeRangeInInstruction:(id<AVVideoCompositionInstruction>)videoCompositionInstruction {
+    NSLog(@"invalid time range in instruction: %@", videoCompositionInstruction);
+    return YES;
 }
--(CVPixelBufferRef)newPixelBuffer {
-    CVPixelBufferRef pixelBuffer = NULL;
-    CVReturn status = CVPixelBufferPoolCreatePixelBuffer(NULL, self.outputWriterVideoInputAdapter.pixelBufferPool, &pixelBuffer);
 
-    if (status != kCVReturnSuccess)
-    {
-        NSLog(@"Failed to create pixel buffer (%d)", status);
-        return NULL;
-    }
-
-    return pixelBuffer;
+/*!
+ @method		videoComposition:shouldContinueValidatingAfterFindingInvalidTrackIDInInstruction:layerInstruction:asset:
+ @abstract
+ Invoked by an instance of AVVideoComposition when validating an instance of AVVideoComposition, to report a video composition layer instruction with a trackID that does not correspond either to the trackID used for the composition's animationTool or to a track of the asset specified in -[AVVideoComposition isValidForAsset:timeRange:delegate:].
+ @result
+ An indication of whether the AVVideoComposition should continue validation in order to report additional problems that may exist.
+ */
+- (BOOL)videoComposition:(AVVideoComposition *)videoComposition shouldContinueValidatingAfterFindingInvalidTrackIDInInstruction:(id<AVVideoCompositionInstruction>)videoCompositionInstruction layerInstruction:(AVVideoCompositionLayerInstruction *)layerInstruction asset:(AVAsset *)asset {
+    NSLog(@"invalid trackID in instruction: %@, %@, %@", videoCompositionInstruction, layerInstruction, asset);
+    return YES;
 }
 
 @end
