@@ -209,21 +209,57 @@
 
 -(void)interpolateToOutput:(NSURL *)output {
 
-    AVAssetTrack *videoTrack = [self.inputAsset tracksWithMediaType:AVMediaTypeVideo][0];
+    /*
+     * General variables
+     */
 
+    NSError *err = nil;
+
+    AVAsset *inputAsset = self.inputAsset;
+    id<AVVideoCompositing> compositor = [self newCompositor];
+    // Pick first video track. Maybe not later?
+    AVAssetTrack *inputTrack = [inputAsset tracksWithMediaType:AVMediaTypeVideo][0];
+
+    /*
+     * Setup input/reader
+     */
+
+    NSDictionary *compositorOutputSettings = [compositor sourcePixelBufferAttributes];
+
+    AVAssetReader *reader = [[AVAssetReader alloc] initWithAsset:inputAsset error:&err];
+    AVAssetReaderTrackOutput *readerOutput = [[AVAssetReaderTrackOutput alloc] initWithTrack:inputTrack outputSettings:compositorOutputSettings];
+
+    if (![reader canAddOutput:readerOutput])
+    {
+        [self.delegate interpolatorFailed:self withError:nil];
+        return;
+    }
+    [reader addOutput:readerOutput];
+
+    /*
+     * Setup output/writer
+     */
+
+    /*
+     * Setup compositor and render context
+     *
+     * When does this happen??
+     */
+
+
+    [self.delegate interpolatorFinished:self];
+
+}
+
+#pragma mark Methods used for -interpolateToOutput:
+
+-(id<AVVideoCompositing>)newCompositor {
     Class compositorClass = self.customCompositor;
     if (!compositorClass)
     {
         compositorClass = [RSFrameInterpolatorDefaultCompositor class];
     }
-    id<AVVideoCompositing> compositor = [compositorClass new];
-
-    NSLog(@"%@, %@", videoTrack, compositor);
-    // TODO
-
-
-    [self.delegate interpolatorFinished:self];
-
+    return [compositorClass new];
 }
 
 @end
