@@ -221,6 +221,9 @@
     NSLog(@"%@, %@", videoTrack, compositor);
     // TODO
 
+
+    [self.delegate interpolatorFinished:self];
+
 }
 
 @end
