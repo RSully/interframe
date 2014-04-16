@@ -9,6 +9,7 @@
 #import "RSFrameInterpolator.h"
 #import "RSFrameInterpolatorPassthroughInstruction.h"
 #import "RSFrameInterpolatorInterpolationInstruction.h"
+#import "RSFrameInterpolatorDefaultCompositor.h"
 
 //#define kRSDurationResolution 300
 #define kRSDurationResolution NSEC_PER_SEC
@@ -16,9 +17,12 @@
 
 @interface RSFrameInterpolator ()
 
+/*
+ * Given/init vars
+ */
+
 @property (strong) AVAsset *inputAsset;
 @property (strong) NSURL *outputUrl;
-@property (strong) AVAssetExportSession *exportSession;
 @property Class<AVVideoCompositing> compositor;
 
 @end
@@ -26,54 +30,27 @@
 
 @implementation RSFrameInterpolator
 
--(id)initWithAsset:(AVAsset *)asset output:(NSURL *)output compositor:(Class<AVVideoCompositing>)compositor {
+-(id)init {
+    if ((self = [super init]))
+    {
+        self.customCompositor = [RSFrameInterpolatorDefaultCompositor class];
+    }
+    return self;
+}
+
+-(id)initWithAsset:(AVAsset *)asset {
     if ((self = [self init]))
     {
         self.inputAsset = asset;
-        self.outputUrl = output;
-        self.compositor = compositor;
     }
     return self;
 }
 
 
--(AVMutableComposition *)buildComposition {
 
-    AVMutableComposition *outputComposition = [AVMutableComposition composition];
-
-    /*
-     * Handle prepping composition
-     */
-
-    NSMutableArray *inputVideoTracks = [NSMutableArray array];
-
-    // Copy any tracks that aren't video
-    for (AVAssetTrack *inputTrack in self.inputAsset.tracks)
-    {
-        if ([inputTrack.mediaType isEqualToString:AVMediaTypeVideo])
-        {
-            [inputVideoTracks addObject:inputTrack];
-            continue;
-        }
-
-        AVMutableCompositionTrack *outputTrack = [outputComposition addMutableTrackWithMediaType:inputTrack.mediaType preferredTrackID:inputTrack.trackID];
-
-        NSError *err = nil;
-        [outputTrack insertTimeRange:inputTrack.timeRange
-                             ofTrack:inputTrack
-                              atTime:inputTrack.timeRange.start
-                               error:&err];
-        if (err)
-        {
-            NSLog(@"Failed to copy track %@ into output composition", inputTrack);
-        }
-    }
-
-    return outputComposition;
-}
-
--(AVMutableVideoComposition *)buildVideoCompositionForComposition:(AVMutableComposition*)composition
-                                                    andVideoTrack:(AVAssetTrack *)inputVideoTrack {
++(AVMutableVideoComposition *)buildVideoCompositionForComposition:(AVMutableComposition*)composition
+                                                    andVideoTrack:(AVAssetTrack *)inputVideoTrack
+                                             withCustomCompositor:(Class<AVVideoCompositing>)compositor {
 
     /**
      * Metadata
@@ -102,7 +79,7 @@
      */
 
     AVMutableVideoComposition *outputVideoComposition = [AVMutableVideoComposition videoCompositionWithPropertiesOfAsset:inputVideoTrack.asset];
-    outputVideoComposition.customVideoCompositorClass = self.compositor;
+    outputVideoComposition.customVideoCompositorClass = compositor;
     outputVideoComposition.frameDuration = outputFrameDuration;
 
     /**
@@ -150,6 +127,7 @@
             [compositionVideoTrackOrigin insertTimeRange:timeRangeInput ofTrack:inputVideoTrack atTime:time error:&err];
             if (err) NSLog(@"error %@", err);
             [compositionVideoTrackOrigin scaleTimeRange:CMTimeRangeMake(time, inputFrameDuration) toDuration:outputFrameDuration];
+
         }
     }
     CMTimeRangeShow(compositionVideoTrackOrigin.timeRange);
@@ -231,28 +209,6 @@
         }
     }
 
-
-
-
-    // Test instructions for video composition using created tracks:
-//    CMTime peM2 = CMTimeSubtract(CMTimeSubtract(CMTimeAdd(originTimeRange.start, originTimeRange.duration), outputFrameDuration), outputFrameDuration);
-//    CMTimeRange insAtr = CMTimeRangeMake(originTimeRange.start, peM2);
-//    CMTimeRange insBtr = CMTimeRangeMake(peM2, outputFrameDuration);
-//    CMTimeRange insCtr = CMTimeRangeMake(CMTimeAdd(peM2, outputFrameDuration), outputFrameDuration);
-//    CMTimeRangeShow(insAtr);
-//    CMTimeRangeShow(insBtr);
-//    RSFrameInterpolatorPassthroughInstruction *insA = [[RSFrameInterpolatorPassthroughInstruction alloc] initWithPassthroughTrackID:originID
-//                                                                                                                       forTimeRange:insAtr];
-//    RSFrameInterpolatorInterpolationInstruction *insB = [[RSFrameInterpolatorInterpolationInstruction alloc] initWithPriorFrameTrackID:priorID
-//                                                                                                                   andNextFrameTrackID:nextID
-//                                                                                                                          forTimeRange:insBtr];
-//    RSFrameInterpolatorPassthroughInstruction *insC = [[RSFrameInterpolatorPassthroughInstruction alloc] initWithPassthroughTrackID:originID
-//                                                                                                                       forTimeRange:insCtr];
-//    outputVideoComposition.instructions = @[insA, insB, insC];
-//    return outputVideoComposition;
-
-
-
     // Add the instructions
     outputVideoComposition.instructions = instructions;
 
@@ -260,98 +216,12 @@
 }
 
 
--(void)interpolate {
+-(void)interpolateToOutput:(NSURL *)output {
 
     AVAssetTrack *videoTrack = [self.inputAsset tracksWithMediaType:AVMediaTypeVideo][0];
 
-    AVMutableComposition *outputComposition = [self buildComposition];
-    NSLog(@"Built composition!");
-    AVMutableVideoComposition *outputVideoComposition = [self buildVideoCompositionForComposition:outputComposition
-                                                                                    andVideoTrack:videoTrack];
-    NSLog(@"Built video composition!");
+    // TODO
 
-    BOOL valid = [outputVideoComposition isValidForAsset:outputComposition timeRange:videoTrack.timeRange validationDelegate:self];
-    NSLog(@"checked validity: %d", valid);
-
-
-    self.exportSession = [[AVAssetExportSession alloc] initWithAsset:outputComposition
-                                                          presetName:AVAssetExportPresetAppleM4VWiFi];
-    self.exportSession.videoComposition = outputVideoComposition;
-
-    self.exportSession.outputFileType = CFBridgingRelease(UTTypeCreatePreferredIdentifierForTag(kUTTagClassFilenameExtension, (__bridge CFStringRef)self.outputUrl.pathExtension, NULL));
-    self.exportSession.outputURL = self.outputUrl;
-
-    NSLog(@"Begin export");
-    [self.exportSession exportAsynchronouslyWithCompletionHandler:^{
-        NSLog(@"Export completion, %ld", self.exportSession.status);
-        NSLog(@"%@, %@", self.exportSession, outputVideoComposition);
-
-        switch (self.exportSession.status)
-        {
-            case AVAssetExportSessionStatusCancelled:
-                NSLog(@".. canceled");
-                break;
-            case AVAssetExportSessionStatusFailed:
-                NSLog(@".. failed: %@", self.exportSession.error);
-                break;
-        }
-
-        [self.delegate interpolatorFinished:self];
-    }];
-}
-
-
-#pragma mark - AVVideoCompositionValidationHandling delegate methods
-
-
-/*!
- @method		videoComposition:shouldContinueValidatingAfterFindingInvalidValueForKey:
- @abstract
- Invoked by an instance of AVVideoComposition when validating an instance of AVVideoComposition, to report a key that has an invalid value.
- @result
- An indication of whether the AVVideoComposition should continue validation in order to report additional problems that may exist.
- */
-- (BOOL)videoComposition:(AVVideoComposition *)videoComposition shouldContinueValidatingAfterFindingInvalidValueForKey:(NSString *)key {
-    NSLog(@"invalid value for key: %@", key);
-    return YES;
-}
-
-/*!
- @method		videoComposition:shouldContinueValidatingAfterFindingEmptyTimeRange:
- @abstract
- Invoked by an instance of AVVideoComposition when validating an instance of AVVideoComposition, to report a timeRange that has no corresponding video composition instruction.
- @result
- An indication of whether the AVVideoComposition should continue validation in order to report additional problems that may exist.
- */
-- (BOOL)videoComposition:(AVVideoComposition *)videoComposition shouldContinueValidatingAfterFindingEmptyTimeRange:(CMTimeRange)timeRange {
-    NSLog(@"empty time range: %f, %f", CMTimeGetSeconds(timeRange.start), CMTimeGetSeconds(timeRange.duration));
-    return YES;
-}
-
-/*!
- @method		videoComposition:shouldContinueValidatingAfterFindingInvalidTimeRangeInInstruction:
- @abstract
- Invoked by an instance of AVVideoComposition when validating an instance of AVVideoComposition, to report a video composition instruction with a timeRange that's invalid, that overlaps with the timeRange of a prior instruction, or that contains times earlier than the timeRange of a prior instruction.
- @discussion
- Use CMTIMERANGE_IS_INVALID, defined in CMTimeRange.h, to test whether the timeRange itself is invalid. Refer to headerdoc for AVVideoComposition.instructions for a discussion of how timeRanges for instructions must be formulated.
- @result
- An indication of whether the AVVideoComposition should continue validation in order to report additional problems that may exist.
- */
-- (BOOL)videoComposition:(AVVideoComposition *)videoComposition shouldContinueValidatingAfterFindingInvalidTimeRangeInInstruction:(id<AVVideoCompositionInstruction>)videoCompositionInstruction {
-    NSLog(@"invalid time range in instruction: %@", videoCompositionInstruction);
-    return YES;
-}
-
-/*!
- @method		videoComposition:shouldContinueValidatingAfterFindingInvalidTrackIDInInstruction:layerInstruction:asset:
- @abstract
- Invoked by an instance of AVVideoComposition when validating an instance of AVVideoComposition, to report a video composition layer instruction with a trackID that does not correspond either to the trackID used for the composition's animationTool or to a track of the asset specified in -[AVVideoComposition isValidForAsset:timeRange:delegate:].
- @result
- An indication of whether the AVVideoComposition should continue validation in order to report additional problems that may exist.
- */
-- (BOOL)videoComposition:(AVVideoComposition *)videoComposition shouldContinueValidatingAfterFindingInvalidTrackIDInInstruction:(id<AVVideoCompositionInstruction>)videoCompositionInstruction layerInstruction:(AVVideoCompositionLayerInstruction *)layerInstruction asset:(AVAsset *)asset {
-    NSLog(@"invalid trackID in instruction: %@, %@, %@", videoCompositionInstruction, layerInstruction, asset);
-    return YES;
 }
 
 @end
