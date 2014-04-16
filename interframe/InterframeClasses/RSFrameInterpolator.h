@@ -23,7 +23,7 @@
 
 -(void)interpolateToOutput:(NSURL *)output;
 
-@property (weak) Class<AVVideoCompositing> customCompositor;
+@property (strong) Class<AVVideoCompositing> customCompositor;
 @property (weak) id<RSFrameInterpolatorDelegate> delegate;
 
 @end

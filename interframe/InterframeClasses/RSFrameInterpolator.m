@@ -23,20 +23,11 @@
 
 @property (strong) AVAsset *inputAsset;
 @property (strong) NSURL *outputUrl;
-@property Class<AVVideoCompositing> compositor;
 
 @end
 
 
 @implementation RSFrameInterpolator
-
--(id)init {
-    if ((self = [super init]))
-    {
-        self.customCompositor = [RSFrameInterpolatorDefaultCompositor class];
-    }
-    return self;
-}
 
 -(id)initWithAsset:(AVAsset *)asset {
     if ((self = [self init]))
@@ -220,6 +211,14 @@
 
     AVAssetTrack *videoTrack = [self.inputAsset tracksWithMediaType:AVMediaTypeVideo][0];
 
+    Class compositorClass = self.customCompositor;
+    if (!compositorClass)
+    {
+        compositorClass = [RSFrameInterpolatorDefaultCompositor class];
+    }
+    id<AVVideoCompositing> compositor = [compositorClass new];
+
+    NSLog(@"%@, %@", videoTrack, compositor);
     // TODO
 
 }
