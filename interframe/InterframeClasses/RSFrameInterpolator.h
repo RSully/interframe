@@ -14,6 +14,7 @@
 
 @protocol RSFrameInterpolatorDelegate <NSObject>
 -(void)interpolatorFinished:(RSFrameInterpolator *)interpolator;
+-(void)interpolatorFailed:(RSFrameInterpolator *)interpolator withError:(NSError *)error;
 @end
 
 

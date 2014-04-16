@@ -40,4 +40,9 @@
     exit(0);
 }
 
+-(void)interpolatorFailed:(RSFrameInterpolator *)interpolator withError:(NSError *)error {
+    NSLog(@"Failed! %@", error);
+    exit(0);
+}
+
 @end
