@@ -16,10 +16,10 @@
 		2B16EB2718F3439D000BA5AD /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2B16EB2618F3439D000BA5AD /* CoreGraphics.framework */; };
 		2B16EB2A18F45F27000BA5AD /* RSExampleInterpolator.m in Sources */ = {isa = PBXBuildFile; fileRef = 2B16EB2918F45F27000BA5AD /* RSExampleInterpolator.m */; };
 		2B16EB5618F4A353000BA5AD /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2B16EB5518F4A353000BA5AD /* Accelerate.framework */; };
-		2B16EB5918F58248000BA5AD /* RSFrameInterpolatorPassthroughInstruction.m in Sources */ = {isa = PBXBuildFile; fileRef = 2B16EB5818F58248000BA5AD /* RSFrameInterpolatorPassthroughInstruction.m */; };
-		2B16EB5C18F5846B000BA5AD /* RSFrameInterpolatorInterpolationInstruction.m in Sources */ = {isa = PBXBuildFile; fileRef = 2B16EB5B18F5846B000BA5AD /* RSFrameInterpolatorInterpolationInstruction.m */; };
 		2B16EB6018F596AD000BA5AD /* RSFrameInterpolatorDefaultCompositor.m in Sources */ = {isa = PBXBuildFile; fileRef = 2B16EB5F18F596AD000BA5AD /* RSFrameInterpolatorDefaultCompositor.m */; };
-		2B16EB6418F5C1F0000BA5AD /* RSFrameInterpolatorBaseInstruction.m in Sources */ = {isa = PBXBuildFile; fileRef = 2B16EB6318F5C1F0000BA5AD /* RSFrameInterpolatorBaseInstruction.m */; };
+		2B1D195C190047AE00A3F7FF /* RSITrackHandler.m in Sources */ = {isa = PBXBuildFile; fileRef = 2B1D195B190047AE00A3F7FF /* RSITrackHandler.m */; };
+		2B1D1962190047D500A3F7FF /* RSITrackHandlerPassthrough.m in Sources */ = {isa = PBXBuildFile; fileRef = 2B1D1961190047D500A3F7FF /* RSITrackHandlerPassthrough.m */; };
+		2B1D1965190047E500A3F7FF /* RSITrackHandlerInterpolate.m in Sources */ = {isa = PBXBuildFile; fileRef = 2B1D1964190047E500A3F7FF /* RSITrackHandlerInterpolate.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -49,14 +49,14 @@
 		2B16EB2818F45F27000BA5AD /* RSExampleInterpolator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RSExampleInterpolator.h; sourceTree = "<group>"; };
 		2B16EB2918F45F27000BA5AD /* RSExampleInterpolator.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = RSExampleInterpolator.m; sourceTree = "<group>"; };
 		2B16EB5518F4A353000BA5AD /* Accelerate.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Accelerate.framework; path = System/Library/Frameworks/Accelerate.framework; sourceTree = SDKROOT; };
-		2B16EB5718F58248000BA5AD /* RSFrameInterpolatorPassthroughInstruction.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RSFrameInterpolatorPassthroughInstruction.h; path = InterframeClasses/RSFrameInterpolatorPassthroughInstruction.h; sourceTree = "<group>"; };
-		2B16EB5818F58248000BA5AD /* RSFrameInterpolatorPassthroughInstruction.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = RSFrameInterpolatorPassthroughInstruction.m; path = InterframeClasses/RSFrameInterpolatorPassthroughInstruction.m; sourceTree = "<group>"; };
-		2B16EB5A18F5846B000BA5AD /* RSFrameInterpolatorInterpolationInstruction.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RSFrameInterpolatorInterpolationInstruction.h; path = InterframeClasses/RSFrameInterpolatorInterpolationInstruction.h; sourceTree = "<group>"; };
-		2B16EB5B18F5846B000BA5AD /* RSFrameInterpolatorInterpolationInstruction.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = RSFrameInterpolatorInterpolationInstruction.m; path = InterframeClasses/RSFrameInterpolatorInterpolationInstruction.m; sourceTree = "<group>"; };
 		2B16EB5E18F596AD000BA5AD /* RSFrameInterpolatorDefaultCompositor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RSFrameInterpolatorDefaultCompositor.h; path = InterframeClasses/RSFrameInterpolatorDefaultCompositor.h; sourceTree = "<group>"; };
 		2B16EB5F18F596AD000BA5AD /* RSFrameInterpolatorDefaultCompositor.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = RSFrameInterpolatorDefaultCompositor.m; path = InterframeClasses/RSFrameInterpolatorDefaultCompositor.m; sourceTree = "<group>"; };
-		2B16EB6218F5C1F0000BA5AD /* RSFrameInterpolatorBaseInstruction.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RSFrameInterpolatorBaseInstruction.h; path = InterframeClasses/RSFrameInterpolatorBaseInstruction.h; sourceTree = "<group>"; };
-		2B16EB6318F5C1F0000BA5AD /* RSFrameInterpolatorBaseInstruction.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = RSFrameInterpolatorBaseInstruction.m; path = InterframeClasses/RSFrameInterpolatorBaseInstruction.m; sourceTree = "<group>"; };
+		2B1D195A190047AE00A3F7FF /* RSITrackHandler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RSITrackHandler.h; path = InterframeClasses/RSITrackHandler.h; sourceTree = "<group>"; };
+		2B1D195B190047AE00A3F7FF /* RSITrackHandler.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = RSITrackHandler.m; path = InterframeClasses/RSITrackHandler.m; sourceTree = "<group>"; };
+		2B1D1960190047D500A3F7FF /* RSITrackHandlerPassthrough.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RSITrackHandlerPassthrough.h; path = InterframeClasses/RSITrackHandlerPassthrough.h; sourceTree = "<group>"; };
+		2B1D1961190047D500A3F7FF /* RSITrackHandlerPassthrough.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = RSITrackHandlerPassthrough.m; path = InterframeClasses/RSITrackHandlerPassthrough.m; sourceTree = "<group>"; };
+		2B1D1963190047E500A3F7FF /* RSITrackHandlerInterpolate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RSITrackHandlerInterpolate.h; path = InterframeClasses/RSITrackHandlerInterpolate.h; sourceTree = "<group>"; };
+		2B1D1964190047E500A3F7FF /* RSITrackHandlerInterpolate.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = RSITrackHandlerInterpolate.m; path = InterframeClasses/RSITrackHandlerInterpolate.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -130,7 +130,7 @@
 				2B16EB2018F339DC000BA5AD /* RSFrameInterpolator.h */,
 				2B16EB2118F339DC000BA5AD /* RSFrameInterpolator.m */,
 				2B16EB6118F596B5000BA5AD /* Compositor */,
-				2B16EB5D18F586A6000BA5AD /* Instructions */,
+				2B16EB5D18F586A6000BA5AD /* Handlers */,
 			);
 			name = Interpolator;
 			sourceTree = "<group>";
@@ -144,17 +144,17 @@
 			name = Example;
 			sourceTree = "<group>";
 		};
-		2B16EB5D18F586A6000BA5AD /* Instructions */ = {
+		2B16EB5D18F586A6000BA5AD /* Handlers */ = {
 			isa = PBXGroup;
 			children = (
-				2B16EB6218F5C1F0000BA5AD /* RSFrameInterpolatorBaseInstruction.h */,
-				2B16EB6318F5C1F0000BA5AD /* RSFrameInterpolatorBaseInstruction.m */,
-				2B16EB5718F58248000BA5AD /* RSFrameInterpolatorPassthroughInstruction.h */,
-				2B16EB5818F58248000BA5AD /* RSFrameInterpolatorPassthroughInstruction.m */,
-				2B16EB5A18F5846B000BA5AD /* RSFrameInterpolatorInterpolationInstruction.h */,
-				2B16EB5B18F5846B000BA5AD /* RSFrameInterpolatorInterpolationInstruction.m */,
+				2B1D195A190047AE00A3F7FF /* RSITrackHandler.h */,
+				2B1D195B190047AE00A3F7FF /* RSITrackHandler.m */,
+				2B1D1960190047D500A3F7FF /* RSITrackHandlerPassthrough.h */,
+				2B1D1961190047D500A3F7FF /* RSITrackHandlerPassthrough.m */,
+				2B1D1963190047E500A3F7FF /* RSITrackHandlerInterpolate.h */,
+				2B1D1964190047E500A3F7FF /* RSITrackHandlerInterpolate.m */,
 			);
-			name = Instructions;
+			name = Handlers;
 			sourceTree = "<group>";
 		};
 		2B16EB6118F596B5000BA5AD /* Compositor */ = {
@@ -217,13 +217,13 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				2B16EB6418F5C1F0000BA5AD /* RSFrameInterpolatorBaseInstruction.m in Sources */,
 				2B16EB6018F596AD000BA5AD /* RSFrameInterpolatorDefaultCompositor.m in Sources */,
-				2B16EB5C18F5846B000BA5AD /* RSFrameInterpolatorInterpolationInstruction.m in Sources */,
 				2B16EB2218F339DC000BA5AD /* RSFrameInterpolator.m in Sources */,
 				2B16EB2A18F45F27000BA5AD /* RSExampleInterpolator.m in Sources */,
-				2B16EB5918F58248000BA5AD /* RSFrameInterpolatorPassthroughInstruction.m in Sources */,
 				2B16EB1218F33888000BA5AD /* main.m in Sources */,
+				2B1D1962190047D500A3F7FF /* RSITrackHandlerPassthrough.m in Sources */,
+				2B1D195C190047AE00A3F7FF /* RSITrackHandler.m in Sources */,
+				2B1D1965190047E500A3F7FF /* RSITrackHandlerInterpolate.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
