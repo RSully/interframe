@@ -108,14 +108,26 @@
     if (![reader startReading])
     {
         NSLog(@"Cannot start reading");
+        return;
     }
+    if (![writer startWriting])
+    {
+        NSLog(@"Cannot start writing");
+        return;
+    }
+    [writer startSessionAtSourceTime:kCMTimeZero];
 
     for (RSITrackHandler *trackHandler in trackHandlers)
     {
-        // TODO
+        [trackHandler startHandling];
     }
 
 
+    // Somehow this isn't waiting correctly.. Groups maybe?
+    [writer finishWritingWithCompletionHandler:^{
+        NSLog(@"-finishWritingWithCompletionHandler");
+        [self.delegate interpolatorFinished:self];
+    }];
 
     
 
@@ -134,11 +146,6 @@
      *   - Wait until look into sample buffers and isReady stuff
      */
 
-
-    /*
-     * Magic
-     */
-
 //    CMSampleBufferRef sampleBuffer;
 //
 //    while ((sampleBuffer = [readerOutput copyNextSampleBuffer]))
@@ -146,9 +153,6 @@
 //        CMItemCount samplesNum = CMSampleBufferGetNumSamples(sampleBuffer);
 //        NSLog(@"GOT SAMPLEZ: %ld", samplesNum);
 //    }
-
-
-    [self.delegate interpolatorFinished:self];
 
 }
 
