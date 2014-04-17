@@ -18,4 +18,8 @@
     return self;
 }
 
+-(void)_mediaDataRequested {
+    NSLog(@"-mediaDataRequested %@", self);
+}
+
 @end

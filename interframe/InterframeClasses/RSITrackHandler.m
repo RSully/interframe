@@ -9,6 +9,7 @@
 #import "RSITrackHandler.h"
 
 @interface RSITrackHandler ()
+@property dispatch_queue_t mediaQueue;
 /*
  * Make these non-readonly
  */
@@ -19,9 +20,18 @@
 
 @implementation RSITrackHandler
 
--(id)_initWithInputTrack:(AVAssetTrack *)inputTrack readerSettings:(NSDictionary *)readerSettings writerSettings:(NSDictionary *)writerSettings
+-(id)init
 {
     if ((self = [super init]))
+    {
+        self.mediaQueue = dispatch_queue_create("me.rsullivan.apps.interframe.trackHandlerMediaQueue", DISPATCH_QUEUE_SERIAL);
+    }
+    return self;
+}
+
+-(id)_initWithInputTrack:(AVAssetTrack *)inputTrack readerSettings:(NSDictionary *)readerSettings writerSettings:(NSDictionary *)writerSettings
+{
+    if ((self = [self init]))
     {
         self.inputTrack = inputTrack;
 
@@ -35,5 +45,15 @@
     }
     return self;
 }
+
+-(void)startHandling {
+    [self.writerInput requestMediaDataWhenReadyOnQueue:self.mediaQueue usingBlock:^{
+        @autoreleasepool {
+            [self _mediaDataRequested];
+        }
+    }];
+}
+
+-(void)_mediaDataRequested {}
 
 @end

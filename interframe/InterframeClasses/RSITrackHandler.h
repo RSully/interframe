@@ -18,4 +18,6 @@
 @property (strong, readonly) AVAssetReaderOutput *readerOutput;
 @property (strong, readonly) AVAssetWriterInput *writerInput;
 
+-(void)startHandling;
+
 @end
