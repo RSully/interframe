@@ -105,6 +105,7 @@
         [trackHandlers addObject:trackHandler];
     }
 
+
     if (![reader startReading])
     {
         NSLog(@"Cannot start reading");
@@ -115,18 +116,30 @@
         NSLog(@"Cannot start writing");
         return;
     }
+
     [writer startSessionAtSourceTime:kCMTimeZero];
+
+
+    dispatch_group_t trackHandlerGroup = dispatch_group_create();
 
     for (RSITrackHandler *trackHandler in trackHandlers)
     {
-        [trackHandler startHandling];
+        dispatch_group_enter(trackHandlerGroup);
+
+        [trackHandler startHandlingWithCompletionHandler:^{
+            dispatch_group_leave(trackHandlerGroup);
+        }];
     }
 
 
-    // Somehow this isn't waiting correctly.. Groups maybe?
+    dispatch_group_wait(trackHandlerGroup, DISPATCH_TIME_FOREVER);
+
     [writer finishWritingWithCompletionHandler:^{
-        NSLog(@"-finishWritingWithCompletionHandler");
-        [self.delegate interpolatorFinished:self];
+        dispatch_sync(dispatch_get_main_queue(), ^{
+            NSLog(@"-finishWritingWithCompletionHandler");
+            NSLog(@"%ld", (long)writer.status);
+            [self.delegate interpolatorFinished:self];
+        });
     }];
 
     

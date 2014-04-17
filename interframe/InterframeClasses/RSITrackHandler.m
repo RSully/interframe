@@ -10,6 +10,7 @@
 
 @interface RSITrackHandler ()
 @property dispatch_queue_t mediaQueue;
+@property BOOL isFinished;
 /*
  * Make these non-readonly
  */
@@ -46,10 +47,26 @@
     return self;
 }
 
--(void)startHandling {
+-(void)markAsFinished
+{
+    [self.writerInput markAsFinished];
+    self.isFinished = YES;
+}
+
+-(void)startHandlingWithCompletionHandler:(void (^)(void))completionHandler {
     [self.writerInput requestMediaDataWhenReadyOnQueue:self.mediaQueue usingBlock:^{
+        if (self.isFinished)
+        {
+            return;
+        }
+
         @autoreleasepool {
             [self _mediaDataRequested];
+        }
+
+        if (self.isFinished)
+        {
+            dispatch_async(dispatch_get_main_queue(), completionHandler);
         }
     }];
 }
