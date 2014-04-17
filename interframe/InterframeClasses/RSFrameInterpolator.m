@@ -15,6 +15,7 @@
 #define kRSDurationResolution NSEC_PER_SEC
 //#define kRSDurationResolution 240
 
+
 @interface RSFrameInterpolator ()
 
 /*
@@ -224,9 +225,15 @@
      * Setup input/reader
      */
 
-    NSDictionary *compositorOutputSettings = [compositor sourcePixelBufferAttributes];
+    NSDictionary *compositorOutputSettings = [[compositor sourcePixelBufferAttributes] copy];
 
     AVAssetReader *reader = [[AVAssetReader alloc] initWithAsset:inputAsset error:&err];
+    if (err)
+    {
+        [self.delegate interpolatorFailed:self withError:nil];
+        return;
+    }
+
     AVAssetReaderTrackOutput *readerOutput = [[AVAssetReaderTrackOutput alloc] initWithTrack:inputTrack outputSettings:compositorOutputSettings];
 
     if (![reader canAddOutput:readerOutput])
@@ -240,12 +247,51 @@
      * Setup output/writer
      */
 
+    NSString *outputFileType = CFBridgingRelease(UTTypeCreatePreferredIdentifierForTag(kUTTagClassFilenameExtension, (__bridge CFStringRef)([output pathExtension]), NULL));
+    AVAssetWriter *writer = [[AVAssetWriter alloc] initWithURL:output fileType:outputFileType error:&err];
+    if (err)
+    {
+        [self.delegate interpolatorFailed:self withError:nil];
+        return;
+    }
+
+    NSDictionary *outputSettings = @{
+                                     AVVideoCodecKey: AVVideoCodecH264,
+                                     AVVideoHeightKey: @(inputTrack.naturalSize.height),
+                                     AVVideoWidthKey: @(inputTrack.naturalSize.width),
+//                                         AVVideoCompressionPropertiesKey: @{
+//                                                 AVVideoProfileLevelKey: AVVideoProfileLevelH264High41,
+//                                                 }
+                                     };
+
+    AVAssetWriterInput *writerInput = [[AVAssetWriterInput alloc] initWithMediaType:AVMediaTypeVideo outputSettings:outputSettings];
+
+    NSMutableDictionary *compositorInputSettings = [[compositor requiredPixelBufferAttributesForRenderContext] mutableCopy];
+    compositorInputSettings[(NSString *)kCVPixelBufferWidthKey] = @(inputTrack.naturalSize.width);
+    compositorInputSettings[(NSString *)kCVPixelBufferHeightKey] = @(inputTrack.naturalSize.height);
+
+    AVAssetWriterInputPixelBufferAdaptor *writerInputAdapter = [[AVAssetWriterInputPixelBufferAdaptor alloc] initWithAssetWriterInput:writerInput sourcePixelBufferAttributes:compositorInputSettings];
+
     /*
      * Setup compositor and render context
      *
      * When does this happen??
      */
 
+    /*
+     * Have to reimplement basics of:
+     * - AVVideoCompositionRenderContext
+     *   - Use AVAssetWriterInputPixelBufferAdaptor?
+     *   - I don't know, use here or there?
+     * - AVAsynchronousVideoCompositionRequest
+     *   - Wait until look into sample buffers and isReady stuff
+     */
+
+
+    /*
+     * Magic
+     */
+    
 
     [self.delegate interpolatorFinished:self];
 
