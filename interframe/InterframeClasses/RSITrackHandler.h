@@ -11,8 +11,11 @@
 
 @interface RSITrackHandler : NSObject
 
-@property (strong) AVAssetReaderOutput *readerOutput;
+-(id)_initWithInputTrack:(AVAssetTrack *)inputTrack readerSettings:(NSDictionary *)readerSettings writerSettings:(NSDictionary *)writerSettings;
 
-@property (strong) AVAssetWriterInput *writerInput;
+@property (strong, readonly) AVAssetTrack *inputTrack;
+
+@property (strong, readonly) AVAssetReaderOutput *readerOutput;
+@property (strong, readonly) AVAssetWriterInput *writerInput;
 
 @end

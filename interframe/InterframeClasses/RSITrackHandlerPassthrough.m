@@ -11,7 +11,7 @@
 @implementation RSITrackHandlerPassthrough
 
 -(id)initWithInputTrack:(AVAssetTrack *)inputTrack {
-    if ((self = [self init]))
+    if ((self = [self _initWithInputTrack:inputTrack readerSettings:nil writerSettings:nil]))
     {
         self.readerOutput.alwaysCopiesSampleData = NO;
     }
