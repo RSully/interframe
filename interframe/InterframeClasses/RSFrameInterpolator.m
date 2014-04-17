@@ -124,11 +124,6 @@
 //    compositorInputSettings[(NSString *)kCVPixelBufferHeightKey] = @(inputTrack.naturalSize.height);
 //    AVAssetWriterInputPixelBufferAdaptor *writerInputAdapter = [[AVAssetWriterInputPixelBufferAdaptor alloc] initWithAssetWriterInput:writerInput sourcePixelBufferAttributes:compositorInputSettings];
 
-    /*
-     * Setup compositor and render context
-     *
-     * When does this happen??
-     */
 
     /*
      * Have to reimplement basics of:
@@ -143,12 +138,6 @@
     /*
      * Magic
      */
-
-    if (![reader startReading])
-    {
-        [self.delegate interpolatorFailed:self withError:nil];
-        return;
-    }
 
 //    CMSampleBufferRef sampleBuffer;
 //
