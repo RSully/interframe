@@ -9,14 +9,20 @@
 #import "RSITrackHandlerInterpolate.h"
 #import "RSIRenderContext.h"
 #import "RSIInterpolationCompositing.h"
+#import "RSIAsynchronousVideoInterpolationRequest.h"
 
 @interface RSITrackHandlerInterpolate () {
     CMSampleBufferRef _priorSampleBuffer;
 }
 
 @property (strong) id<RSIInterpolationCompositing> compositor;
-
 @property (strong) RSIRenderContext *renderContext;
+
+@property (strong) dispatch_queue_t readingQueue;
+@property (strong) NSMutableArray *queueRequests;
+@property (strong) NSMutableArray *queueBuffers;
+
+@property BOOL isFinishedReading;
 
 @end
 
@@ -27,12 +33,19 @@
 {
     if ((self = [self _initWithInputTrack:inputTrack readerSettings:[compositor sourcePixelBufferAttributes] writerSettings:nil]))
     {
+        self.readingQueue = dispatch_queue_create("me.rsullivan.interframe.interpolateHandler", DISPATCH_QUEUE_SERIAL);
+        self.queueRequests = [NSMutableArray new];
+        self.queueBuffers = [NSMutableArray new];
+        self.isFinishedReading = NO;
+
         self.compositor = compositor;
 
-//        compositorInputSettings[(NSString *)kCVPixelBufferWidthKey] = @(inputTrack.naturalSize.width);
-//        compositorInputSettings[(NSString *)kCVPixelBufferHeightKey] = @(inputTrack.naturalSize.height);
+        NSMutableDictionary *pixelBufferPoolAttributes = [[compositor requiredPixelBufferAttributesForRenderContext] mutableCopy];
+        pixelBufferPoolAttributes[(NSString *)kCVPixelBufferWidthKey] = @(inputTrack.naturalSize.width);
+        pixelBufferPoolAttributes[(NSString *)kCVPixelBufferHeightKey] = @(inputTrack.naturalSize.height);
+
         self.renderContext = [[RSIRenderContext alloc] _initWithWriterInput:self.writerInput
-                                                           sourceAttributes:[compositor requiredPixelBufferAttributesForRenderContext]];
+                                                           sourceAttributes:pixelBufferPoolAttributes];
         [compositor renderContextChanged:self.renderContext];
     }
     return self;
@@ -45,37 +58,54 @@
     }
 }
 
+-(void)startHandlingWithCompletionHandler:(void (^)(void))completionHandler {
+    dispatch_async(self.readingQueue, ^{
+        [self _readInputMedia];
+    });
+
+    [super startHandlingWithCompletionHandler:completionHandler];
+}
+
+-(void)_readInputMedia {
+//    CMItemCount samplesNum = CMSampleBufferGetNumSamples(sampleBuffer);
+    CMSampleBufferRef priorSampleBuffer = NULL, sampleBuffer = NULL;
+    RSIAsynchronousVideoInterpolationRequest *request = nil;
+
+    priorSampleBuffer = [self.readerOutput copyNextSampleBuffer];
+    // TODO: append prior to queue
+
+    while ((sampleBuffer = [self.readerOutput copyNextSampleBuffer]))
+    {
+        // TODO: append next to queue
+
+
+        request = [[RSIAsynchronousVideoInterpolationRequest alloc] _initWithInterpolator:self
+                                                                            renderContext:self.renderContext
+                                                                                     time:kCMTimeInvalid // TODO: time maybe? get rid of it?
+                                                                                withPrior:CMSampleBufferGetImageBuffer(priorSampleBuffer)
+                                                                                     next:CMSampleBufferGetImageBuffer(sampleBuffer)];
+        [self.queueRequests addObject:request];
+        [self.compositor startVideoCompositionRequest:request];
+
+        CFRelease(priorSampleBuffer);
+        priorSampleBuffer = sampleBuffer;
+    }
+    CFRelease(priorSampleBuffer);
+
+    self.isFinishedReading = YES;
+}
 -(void)_mediaDataRequested {
     NSLog(@"-mediaDataRequested %@", self);
-//    CMItemCount samplesNum = CMSampleBufferGetNumSamples(sampleBuffer);
 
-    if (!_priorSampleBuffer)
+    if ([self.queueBuffers count])
     {
-        _priorSampleBuffer = [self.readerOutput copyNextSampleBuffer];
-        if (!_priorSampleBuffer)
-        {
-            [self markAsFinished];
-            return;
-        }
-
-        // TODO: add _priorSampleBuffer to writer
+        // append buffer
     }
 
-    CMSampleBufferRef nextSampleBuffer = [self.readerOutput copyNextSampleBuffer];
-    if (!nextSampleBuffer)
+    if (self.isFinishedReading && [self.queueRequests count] < 1)
     {
         [self markAsFinished];
-        return;
     }
-
-    // TODO: get interpolated frame
-    // TODO: add interpolated frame to writer
-
-    // TODO: add nextSampleBuffer to writer
-
-    // Swap prior for next
-    CFRelease(_priorSampleBuffer);
-    _priorSampleBuffer = nextSampleBuffer;
 }
 
 @end
