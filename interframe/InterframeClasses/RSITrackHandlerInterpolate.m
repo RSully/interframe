@@ -23,19 +23,6 @@
 
 -(id)initWithInputTrack:(AVAssetTrack *)inputTrack compositor:(id<RSIInterpolationCompositing>)compositor
 {
-
-    // Uncomment if we need format/width/height/etc.
-//    CMFormatDescriptionRef formatHint = (__bridge CMFormatDescriptionRef)([inputTrack formatDescriptions][0]);
-//    CMVideoCodecType formatCodec = CFSwapInt32BigToHost(CMFormatDescriptionGetMediaSubType(formatHint));
-//    char formatCodecBuf[sizeof(CMVideoCodecType) + 1] = {0}; // add 1 for null terminator
-//    memcpy(formatCodecBuf, &formatCodec, sizeof(CMVideoCodecType));
-//    NSString *formatCodecString = @(formatCodecBuf);
-//    NSDictionary *writerSettings = @{
-//                                     AVVideoCodecKey: formatCodecString,
-//                                     AVVideoWidthKey: @(inputTrack.naturalSize.width),
-//                                     AVVideoHeightKey: @(inputTrack.naturalSize.height)
-//                                     };
-
     if ((self = [self _initWithInputTrack:inputTrack readerSettings:[compositor sourcePixelBufferAttributes] writerSettings:nil]))
     {
         self.compositor = compositor;
