@@ -13,26 +13,23 @@
 @interface RSExampleInterpolator ()
 
 @property (nonatomic, strong) RSFrameInterpolator *interpolator;
-@property (nonatomic, strong) NSURL *outputUrl;
 
 @end
 
 
 @implementation RSExampleInterpolator
 
--(id)initWithAsset:(AVAsset *)asset output:(NSURL *)output {
+-(id)initWithInput:(NSURL *)input output:(NSURL *)output {
     if ((self = [super init]))
     {
-        self.outputUrl = output;
-
-        self.interpolator = [[RSFrameInterpolator alloc] initWithAsset:asset];
+        self.interpolator = [[RSFrameInterpolator alloc] initWithInput:input output:output];
         self.interpolator.delegate = self;
     }
     return self;
 }
 
 -(void)interpolate {
-    [self.interpolator interpolateToOutput:self.outputUrl];
+    [self.interpolator interpolateAsynchronously];
 }
 
 -(void)interpolatorFinished:(RSFrameInterpolator *)interpolator {

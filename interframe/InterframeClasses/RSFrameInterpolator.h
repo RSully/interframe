@@ -20,9 +20,9 @@
 
 @interface RSFrameInterpolator : NSObject
 
--(id)initWithAsset:(AVAsset *)asset;
+-(id)initWithInput:(NSURL *)input output:(NSURL *)output;
 
--(void)interpolateToOutput:(NSURL *)output;
+-(void)interpolateAsynchronously;
 
 @property Class<AVVideoCompositing> customCompositor;
 @property (weak) id<RSFrameInterpolatorDelegate> delegate;

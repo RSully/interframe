@@ -21,26 +21,42 @@
 /*
  * Given/init vars
  */
-
 @property (strong) AVAsset *inputAsset;
 @property (strong) NSURL *outputUrl;
+
+@property (strong) dispatch_queue_t interpolationQueue;
 
 @end
 
 
 @implementation RSFrameInterpolator
 
--(id)initWithAsset:(AVAsset *)asset {
+-(id)init
+{
+    if ((self = [super init]))
+    {
+        self.interpolationQueue = dispatch_queue_create("me.rsullivan.apps.interframe.interpolationQueue", DISPATCH_QUEUE_SERIAL);
+    }
+    return self;
+}
+
+-(id)initWithInput:(NSURL *)input output:(NSURL *)output {
     if ((self = [self init]))
     {
-        self.inputAsset = asset;
+        self.inputAsset = [[AVURLAsset alloc] initWithURL:input options:@{AVURLAssetPreferPreciseDurationAndTimingKey: @(YES)}];
+        self.outputUrl = output;
     }
     return self;
 }
 
 
 
--(void)interpolateToOutput:(NSURL *)output {
+-(void)interpolateAsynchronously {
+    dispatch_async(self.interpolationQueue, ^{
+        [self _interpolate];
+    });
+}
+-(void)_interpolate {
 
     /*
      * General variables
@@ -49,6 +65,7 @@
     NSError *err = nil;
 
     AVAsset *inputAsset = self.inputAsset;
+    NSURL *output = self.outputUrl;
     NSArray *interpolationTrackIDs = @[@([[inputAsset tracksWithMediaType:AVMediaTypeVideo][0] trackID])];
 
 
@@ -136,8 +153,7 @@
 
     [writer finishWritingWithCompletionHandler:^{
         dispatch_sync(dispatch_get_main_queue(), ^{
-            NSLog(@"-finishWritingWithCompletionHandler");
-            NSLog(@"%ld", (long)writer.status);
+            NSLog(@"-finishWritingWithCompletionHandler %ld", writer.status);
             [self.delegate interpolatorFinished:self];
         });
     }];

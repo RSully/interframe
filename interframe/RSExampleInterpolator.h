@@ -12,7 +12,7 @@
 
 @interface RSExampleInterpolator : NSObject <RSFrameInterpolatorDelegate>
 
--(id)initWithAsset:(AVAsset *)asset output:(NSURL *)output;
+-(id)initWithInput:(NSURL *)input output:(NSURL *)output;
 
 -(void)interpolate;
 

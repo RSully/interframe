@@ -23,4 +23,6 @@
  */
 -(void)startHandlingWithCompletionHandler:(void (^)(void))completionHandler;
 
+-(void)markAsFinished;
+
 @end

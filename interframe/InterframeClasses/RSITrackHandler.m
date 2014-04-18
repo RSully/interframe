@@ -9,7 +9,7 @@
 #import "RSITrackHandler.h"
 
 @interface RSITrackHandler ()
-@property dispatch_queue_t mediaQueue;
+@property (strong) dispatch_queue_t mediaQueue;
 @property BOOL isFinished;
 /*
  * Make these non-readonly
@@ -49,6 +49,7 @@
 
 -(void)markAsFinished
 {
+    NSLog(@"-markAsFinish %@", self);
     [self.writerInput markAsFinished];
     self.isFinished = YES;
 }
