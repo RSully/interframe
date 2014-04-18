@@ -13,4 +13,6 @@
 
 -(id)_initWithWriterInput:(AVAssetWriterInput *)writerInput sourceAttributes:(NSDictionary *)attributes;
 
+-(CVPixelBufferRef)newPixelBuffer;
+
 @end

@@ -26,4 +26,17 @@
     return self;
 }
 
+-(CVPixelBufferRef)newPixelBuffer {
+    CVPixelBufferRef pixelBuffer = NULL;
+    CVReturn status = CVPixelBufferPoolCreatePixelBuffer(NULL, self.writerAdapter.pixelBufferPool, &pixelBuffer);
+
+    if (status != kCVReturnSuccess)
+    {
+        NSLog(@"Failed to create pixel buffer (%d)", status);
+        return NULL;
+    }
+
+    return pixelBuffer;
+}
+
 @end
