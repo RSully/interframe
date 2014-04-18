@@ -21,6 +21,7 @@
 		2B1D1962190047D500A3F7FF /* RSITrackHandlerPassthrough.m in Sources */ = {isa = PBXBuildFile; fileRef = 2B1D1961190047D500A3F7FF /* RSITrackHandlerPassthrough.m */; };
 		2B1D1965190047E500A3F7FF /* RSITrackHandlerInterpolate.m in Sources */ = {isa = PBXBuildFile; fileRef = 2B1D1964190047E500A3F7FF /* RSITrackHandlerInterpolate.m */; };
 		2B1D19681900AD3100A3F7FF /* RSIRenderContext.m in Sources */ = {isa = PBXBuildFile; fileRef = 2B1D19671900AD3100A3F7FF /* RSIRenderContext.m */; };
+		2B1D196C190165A900A3F7FF /* RSIAsynchronousVideoInterpolationRequest.m in Sources */ = {isa = PBXBuildFile; fileRef = 2B1D196B190165A900A3F7FF /* RSIAsynchronousVideoInterpolationRequest.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -61,6 +62,8 @@
 		2B1D19661900AD3100A3F7FF /* RSIRenderContext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RSIRenderContext.h; path = InterframeClasses/RSIRenderContext.h; sourceTree = "<group>"; };
 		2B1D19671900AD3100A3F7FF /* RSIRenderContext.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = RSIRenderContext.m; path = InterframeClasses/RSIRenderContext.m; sourceTree = "<group>"; };
 		2B1D19691900AEA000A3F7FF /* RSIInterpolationCompositing.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = RSIInterpolationCompositing.h; path = InterframeClasses/RSIInterpolationCompositing.h; sourceTree = "<group>"; };
+		2B1D196A190165A900A3F7FF /* RSIAsynchronousVideoInterpolationRequest.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RSIAsynchronousVideoInterpolationRequest.h; path = InterframeClasses/RSIAsynchronousVideoInterpolationRequest.h; sourceTree = "<group>"; };
+		2B1D196B190165A900A3F7FF /* RSIAsynchronousVideoInterpolationRequest.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = RSIAsynchronousVideoInterpolationRequest.m; path = InterframeClasses/RSIAsynchronousVideoInterpolationRequest.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -167,6 +170,8 @@
 				2B1D19691900AEA000A3F7FF /* RSIInterpolationCompositing.h */,
 				2B1D19661900AD3100A3F7FF /* RSIRenderContext.h */,
 				2B1D19671900AD3100A3F7FF /* RSIRenderContext.m */,
+				2B1D196A190165A900A3F7FF /* RSIAsynchronousVideoInterpolationRequest.h */,
+				2B1D196B190165A900A3F7FF /* RSIAsynchronousVideoInterpolationRequest.m */,
 				2B16EB5E18F596AD000BA5AD /* RSFrameInterpolatorDefaultCompositor.h */,
 				2B16EB5F18F596AD000BA5AD /* RSFrameInterpolatorDefaultCompositor.m */,
 			);
@@ -231,6 +236,7 @@
 				2B16EB1218F33888000BA5AD /* main.m in Sources */,
 				2B1D1962190047D500A3F7FF /* RSITrackHandlerPassthrough.m in Sources */,
 				2B1D195C190047AE00A3F7FF /* RSITrackHandler.m in Sources */,
+				2B1D196C190165A900A3F7FF /* RSIAsynchronousVideoInterpolationRequest.m in Sources */,
 				2B1D1965190047E500A3F7FF /* RSITrackHandlerInterpolate.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

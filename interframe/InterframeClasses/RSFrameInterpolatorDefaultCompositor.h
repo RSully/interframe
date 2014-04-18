@@ -7,7 +7,6 @@
 //
 
 #import <Foundation/Foundation.h>
-#import "RSFrameInterpolator.h"
 #import <Accelerate/Accelerate.h>
 #import "RSIInterpolationCompositing.h"
 

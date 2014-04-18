@@ -8,6 +8,8 @@
 
 #import "RSFrameInterpolatorDefaultCompositor.h"
 #import <AppKit/AppKit.h>
+#import "RSFrameInterpolator.h"
+#import "RSIAsynchronousVideoInterpolationRequest.m"
 
 @interface RSFrameInterpolatorDefaultCompositor () {
     dispatch_queue_t _renderingQueue;
@@ -25,7 +27,7 @@
     return self;
 }
 
--(void)startVideoCompositionRequest:(id)asyncVideoCompositionRequest {
+-(void)startVideoCompositionRequest:(RSIAsynchronousVideoInterpolationRequest *)asyncVideoCompositionRequest {
     NSLog(@"-startVideoCompositionRequest");
 
     @autoreleasepool {
@@ -33,17 +35,18 @@
 
             NSLog(@"Rendering interpolation frame");
 
-            AVVideoCompositionRenderContext *renderContext = nil;//asyncVideoCompositionRequest.renderContext;
+            RSIRenderContext *renderContext = asyncVideoCompositionRequest.renderContext;
             CVPixelBufferRef inbetweenPixelBuffer = [renderContext newPixelBuffer];
+
             if (!inbetweenPixelBuffer)
             {
                 NSLog(@"Didnt get pixel buffer to write to");
-                [asyncVideoCompositionRequest finishWithError:[NSError errorWithDomain:@"com.rsullivan.apps.interframe" code:2 userInfo:nil]];
+                [asyncVideoCompositionRequest finishWithError:[NSError errorWithDomain:@"me.rsullivan.apps.interframe.videoRequest" code:2 userInfo:nil]];
                 return;
             }
-//            CVImageBufferRef priorPixelBuffer = [asyncVideoCompositionRequest sourceFrameByTrackID:[currentInstruction priorID]];
-//            CVImageBufferRef nextPixelBuffer = [asyncVideoCompositionRequest sourceFrameByTrackID:[currentInstruction nextID]];
-            CVImageBufferRef priorPixelBuffer = NULL, nextPixelBuffer = NULL;
+
+            CVImageBufferRef priorPixelBuffer = [asyncVideoCompositionRequest sourceFramePrior];
+            CVImageBufferRef nextPixelBuffer = [asyncVideoCompositionRequest sourceFrameNext];
 
 
 
@@ -52,11 +55,8 @@
 
 
 
-//            NSLog(@"going to finish frame");
             // Return the pixel buffer
-//            [asyncVideoCompositionRequest finishWithComposedVideoFrame:priorPixelBuffer];
             [asyncVideoCompositionRequest finishWithComposedVideoFrame:inbetweenPixelBuffer];
-//            NSLog(@"finished frame");
 
             // Cleanup
             CVPixelBufferRelease(inbetweenPixelBuffer);
@@ -66,7 +66,6 @@
 
 -(void)renderContextChanged:(RSIRenderContext *)newRenderContext {
     NSLog(@"-renderContextChanged");
-    // Umm.
 }
 
 /**
@@ -102,7 +101,6 @@
 
 
 +(void)fillPixelBuffer:(CVPixelBufferRef)pixelBuffer byInterpolatingPrior:(CVPixelBufferRef)prior andNext:(CVPixelBufferRef)next {
-//    NSLog(@"-fillPixelBuffer:byInterpolatingPrior:andNext:");
 
     CVPixelBufferLockBaseAddress(prior, kCVPixelBufferLock_ReadOnly);
     CVPixelBufferLockBaseAddress(next, kCVPixelBufferLock_ReadOnly);
