@@ -69,13 +69,26 @@
 -(void)_readInputMedia {
 //    CMItemCount samplesNum = CMSampleBufferGetNumSamples(sampleBuffer);
     CMSampleBufferRef priorSampleBuffer = NULL, sampleBuffer = NULL;
+    BOOL wrotePriorSample = NO;
     RSIAsynchronousVideoInterpolationRequest *request = nil;
 
     priorSampleBuffer = [self.readerOutput copyNextSampleBuffer];
-    // TODO: append prior to queue
+
+    if (!priorSampleBuffer)
+    {
+        self.isFinishedReading = YES;
+        return;
+    }
 
     while ((sampleBuffer = [self.readerOutput copyNextSampleBuffer]))
     {
+        if (!wrotePriorSample)
+        {
+            // TODO: get new frame rate and durations based on priorSampleBuffer and sampleBuffer
+            // TODO: append prior sample
+
+            wrotePriorSample = YES;
+        }
         // TODO: append next to queue
 
 
