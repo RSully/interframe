@@ -10,7 +10,9 @@
 #import "RSIRenderContext.h"
 #import "RSIInterpolationCompositing.h"
 
-@interface RSITrackHandlerInterpolate ()
+@interface RSITrackHandlerInterpolate () {
+    CMSampleBufferRef _priorSampleBuffer;
+}
 
 @property (strong) id<RSIInterpolationCompositing> compositor;
 
@@ -27,15 +29,50 @@
     {
         self.compositor = compositor;
 
-        self.renderContext = [[RSIRenderContext alloc] _initWithWriterInput:self.writerInput sourceAttributes:[compositor requiredPixelBufferAttributesForRenderContext]];
+        self.renderContext = [[RSIRenderContext alloc] _initWithWriterInput:self.writerInput
+                                                           sourceAttributes:[compositor requiredPixelBufferAttributesForRenderContext]];
         [compositor renderContextChanged:self.renderContext];
     }
     return self;
 }
 
+-(void)dealloc {
+    if (_priorSampleBuffer)
+    {
+        CFRelease(_priorSampleBuffer), _priorSampleBuffer = NULL;
+    }
+}
+
 -(void)_mediaDataRequested {
     NSLog(@"-mediaDataRequested %@", self);
-    [self markAsFinished];
+
+    if (!_priorSampleBuffer)
+    {
+        _priorSampleBuffer = [self.readerOutput copyNextSampleBuffer];
+        if (!_priorSampleBuffer)
+        {
+            [self markAsFinished];
+            return;
+        }
+
+        // TODO: add _priorSampleBuffer to writer
+    }
+
+    CMSampleBufferRef nextSampleBuffer = [self.readerOutput copyNextSampleBuffer];
+    if (!nextSampleBuffer)
+    {
+        [self markAsFinished];
+        return;
+    }
+
+    // TODO: get interpolated frame
+    // TODO: add interpolated frame to writer
+
+    // TODO: add nextSampleBuffer to writer
+
+    // Swap prior for next
+    CFRelease(_priorSampleBuffer);
+    _priorSampleBuffer = nextSampleBuffer;
 }
 
 @end
