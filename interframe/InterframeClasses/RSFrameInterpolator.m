@@ -10,6 +10,7 @@
 #import "RSFrameInterpolatorDefaultCompositor.h"
 #import "RSITrackHandlerPassthrough.h"
 #import "RSITrackHandlerInterpolate.h"
+#import "RSIAsynchronousVideoInterpolationRequest.h"
 
 //#define kRSDurationResolution 300
 #define kRSDurationResolution NSEC_PER_SEC
@@ -157,31 +158,6 @@
             [self.delegate interpolatorFinished:self];
         });
     }];
-
-    
-
-//    NSMutableDictionary *compositorInputSettings = [[compositor requiredPixelBufferAttributesForRenderContext] mutableCopy];
-//    compositorInputSettings[(NSString *)kCVPixelBufferWidthKey] = @(inputTrack.naturalSize.width);
-//    compositorInputSettings[(NSString *)kCVPixelBufferHeightKey] = @(inputTrack.naturalSize.height);
-//    AVAssetWriterInputPixelBufferAdaptor *writerInputAdapter = [[AVAssetWriterInputPixelBufferAdaptor alloc] initWithAssetWriterInput:writerInput sourcePixelBufferAttributes:compositorInputSettings];
-
-
-    /*
-     * Have to reimplement basics of:
-     * - AVVideoCompositionRenderContext
-     *   - Use AVAssetWriterInputPixelBufferAdaptor?
-     *   - I don't know, use here or there?
-     * - AVAsynchronousVideoCompositionRequest
-     *   - Wait until look into sample buffers and isReady stuff
-     */
-
-//    CMSampleBufferRef sampleBuffer;
-//
-//    while ((sampleBuffer = [readerOutput copyNextSampleBuffer]))
-//    {
-//        CMItemCount samplesNum = CMSampleBufferGetNumSamples(sampleBuffer);
-//        NSLog(@"GOT SAMPLEZ: %ld", samplesNum);
-//    }
 
 }
 

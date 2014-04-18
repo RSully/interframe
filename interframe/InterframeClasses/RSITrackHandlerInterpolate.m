@@ -29,6 +29,8 @@
     {
         self.compositor = compositor;
 
+//        compositorInputSettings[(NSString *)kCVPixelBufferWidthKey] = @(inputTrack.naturalSize.width);
+//        compositorInputSettings[(NSString *)kCVPixelBufferHeightKey] = @(inputTrack.naturalSize.height);
         self.renderContext = [[RSIRenderContext alloc] _initWithWriterInput:self.writerInput
                                                            sourceAttributes:[compositor requiredPixelBufferAttributesForRenderContext]];
         [compositor renderContextChanged:self.renderContext];
@@ -45,6 +47,7 @@
 
 -(void)_mediaDataRequested {
     NSLog(@"-mediaDataRequested %@", self);
+//    CMItemCount samplesNum = CMSampleBufferGetNumSamples(sampleBuffer);
 
     if (!_priorSampleBuffer)
     {
