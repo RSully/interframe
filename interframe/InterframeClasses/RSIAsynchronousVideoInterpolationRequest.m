@@ -9,25 +9,29 @@
 #import "RSIAsynchronousVideoInterpolationRequest.h"
 
 @interface RSIAsynchronousVideoInterpolationRequest ()
-@property (nonatomic, strong) RSITrackHandler *handler;
+@property (nonatomic, strong) RSITrackHandlerInterpolate *handler;
 /*
  * Make public non-readonly
  */
 @property (nonatomic) CVPixelBufferRef sourceFramePrior;
 @property (nonatomic) CVPixelBufferRef sourceFrameNext;
+@property (nonatomic) CMTime time;
 @property (nonatomic, strong) RSIRenderContext *renderContext;
 @end
 
 @implementation RSIAsynchronousVideoInterpolationRequest
 
--(id)_initWithTrackHandler:(RSITrackHandler *)handler
+-(id)_initWithTrackHandler:(RSITrackHandlerInterpolate *)handler
              renderContext:(RSIRenderContext *)renderContext
+                      time:(CMTime)time
                  withPrior:(CVPixelBufferRef)prior
                       next:(CVPixelBufferRef)next {
     if ((self = [self init]))
     {
         self.handler = handler;
         self.renderContext = renderContext;
+
+        self.time = time;
 
         self.sourceFramePrior = CVPixelBufferRetain(prior);
         self.sourceFrameNext = CVPixelBufferRetain(next);
@@ -42,13 +46,13 @@
 
 
 -(void)finishCancelledRequest {
-    NSLog(@"-finishCancelledRequest");
+    [self.handler videoRequestFinishedCancelled:self];
 }
 -(void)finishWithComposedVideoFrame:(CVPixelBufferRef)frame {
-    NSLog(@"-finishWithComposedVideoFrame");
+    [self.handler videoRequest:self finishedWithFrame:frame];
 }
 -(void)finishWithError:(NSError *)error {
-    NSLog(@"-finishWithError ***: %@", error);
+    [self.handler videoRequest:self finishedWithError:error];
 }
 
 @end

@@ -8,13 +8,14 @@
 
 #import <Foundation/Foundation.h>
 #import <AVFoundation/AVFoundation.h>
-#import "RSITrackHandler.h"
+#import "RSITrackHandlerInterpolate.h"
 #import "RSIRenderContext.h"
 
 @interface RSIAsynchronousVideoInterpolationRequest : NSObject
 
--(id)_initWithTrackHandler:(RSITrackHandler *)handler
+-(id)_initWithTrackHandler:(RSITrackHandlerInterpolate *)handler
              renderContext:(RSIRenderContext *)renderContext
+                      time:(CMTime)time
                  withPrior:(CVPixelBufferRef)prior
                       next:(CVPixelBufferRef)next;
 
@@ -24,6 +25,7 @@
 
 @property (nonatomic, readonly) CVPixelBufferRef sourceFramePrior;
 @property (nonatomic, readonly) CVPixelBufferRef sourceFrameNext;
+@property (nonatomic, readonly) CMTime time;
 
 @property (nonatomic, strong, readonly) RSIRenderContext *renderContext;
 

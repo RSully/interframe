@@ -16,12 +16,11 @@
 
 @implementation RSIRenderContext
 
--(id)_initWithWriterInput:(AVAssetWriterInput *)writerInput sourceAttributes:(NSDictionary *)attributes
+-(id)_initWithAdapter:(AVAssetWriterInputPixelBufferAdaptor *)adapter
 {
     if ((self = [self init]))
     {
-        self.writerAdapter = [[AVAssetWriterInputPixelBufferAdaptor alloc] initWithAssetWriterInput:writerInput
-                                                                        sourcePixelBufferAttributes:attributes];
+        self.writerAdapter = adapter;
     }
     return self;
 }
@@ -35,6 +34,7 @@
         NSLog(@"Failed to create pixel buffer (%d)", status);
         return NULL;
     }
+    NSLog(@"CREATED A PIXEL BUFFER");
 
     return pixelBuffer;
 }

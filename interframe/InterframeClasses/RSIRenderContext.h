@@ -11,7 +11,7 @@
 
 @interface RSIRenderContext : NSObject
 
--(id)_initWithWriterInput:(AVAssetWriterInput *)writerInput sourceAttributes:(NSDictionary *)attributes;
+-(id)_initWithAdapter:(AVAssetWriterInputPixelBufferAdaptor *)adapter;
 
 -(CVPixelBufferRef)newPixelBuffer;
 
