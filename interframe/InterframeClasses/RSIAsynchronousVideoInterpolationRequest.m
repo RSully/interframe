@@ -9,7 +9,7 @@
 #import "RSIAsynchronousVideoInterpolationRequest.h"
 
 @interface RSIAsynchronousVideoInterpolationRequest ()
-@property (nonatomic, strong) RSFrameInterpolator *interpolator;
+@property (nonatomic, strong) RSITrackHandler *handler;
 /*
  * Make public non-readonly
  */
@@ -21,14 +21,14 @@
 
 @implementation RSIAsynchronousVideoInterpolationRequest
 
--(id)_initWithInterpolator:(RSFrameInterpolator *)interpolator
+-(id)_initWithInterpolator:(RSITrackHandler *)handler
              renderContext:(RSIRenderContext *)renderContext
                       time:(CMTime)time
                  withPrior:(CVPixelBufferRef)prior
                       next:(CVPixelBufferRef)next {
     if ((self = [self init]))
     {
-        self.interpolator = interpolator;
+        self.handler = handler;
         self.renderContext = renderContext;
 
         self.time = time;

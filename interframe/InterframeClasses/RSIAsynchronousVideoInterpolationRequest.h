@@ -8,12 +8,12 @@
 
 #import <Foundation/Foundation.h>
 #import <AVFoundation/AVFoundation.h>
-#import "RSFrameInterpolator.h"
+#import "RSITrackHandler.h"
 #import "RSIRenderContext.h"
 
 @interface RSIAsynchronousVideoInterpolationRequest : NSObject
 
--(id)_initWithInterpolator:(RSFrameInterpolator *)interpolator
+-(id)_initWithInterpolator:(RSITrackHandler *)interpolator
              renderContext:(RSIRenderContext *)renderContext
                       time:(CMTime)time
                  withPrior:(CVPixelBufferRef)prior
