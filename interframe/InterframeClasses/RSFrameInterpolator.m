@@ -94,7 +94,7 @@
 
         if (isInterpolationTrack)
         {
-            id<AVVideoCompositing> compositor = [self newCompositor];
+            id<RSIInterpolationCompositing> compositor = [self newCompositor];
 
             trackHandler = [[RSITrackHandlerInterpolate alloc] initWithInputTrack:inputTrack compositor:compositor];
         }
@@ -187,7 +187,7 @@
 
 #pragma mark Methods used for -interpolateToOutput:
 
--(id<AVVideoCompositing>)newCompositor {
+-(id<RSIInterpolationCompositing>)newCompositor {
     Class compositorClass = self.customCompositor;
     if (!compositorClass)
     {

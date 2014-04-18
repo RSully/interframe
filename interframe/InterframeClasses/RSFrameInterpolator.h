@@ -9,6 +9,7 @@
 #import <Foundation/Foundation.h>
 #import <CoreGraphics/CoreGraphics.h>
 #import <AVFoundation/AVFoundation.h>
+#import "RSIInterpolationCompositing.h"
 
 @class RSFrameInterpolator;
 
@@ -24,7 +25,7 @@
 
 -(void)interpolateAsynchronously;
 
-@property Class<AVVideoCompositing> customCompositor;
+@property Class<RSIInterpolationCompositing> customCompositor;
 @property (weak) id<RSFrameInterpolatorDelegate> delegate;
 
 @end

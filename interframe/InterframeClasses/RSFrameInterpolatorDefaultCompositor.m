@@ -7,8 +7,6 @@
 //
 
 #import "RSFrameInterpolatorDefaultCompositor.h"
-#import "RSFrameInterpolatorInterpolationInstruction.h"
-#import "RSFrameInterpolatorPassthroughInstruction.h"
 #import <AppKit/AppKit.h>
 
 @interface RSFrameInterpolatorDefaultCompositor () {
@@ -27,22 +25,15 @@
     return self;
 }
 
--(void)startVideoCompositionRequest:(AVAsynchronousVideoCompositionRequest *)asyncVideoCompositionRequest {
+-(void)startVideoCompositionRequest:(id)asyncVideoCompositionRequest {
     NSLog(@"-startVideoCompositionRequest");
 
     @autoreleasepool {
         dispatch_async(_renderingQueue, ^{
-            RSFrameInterpolatorInterpolationInstruction *currentInstruction = (RSFrameInterpolatorInterpolationInstruction *)asyncVideoCompositionRequest.videoCompositionInstruction;
-            if (![currentInstruction isKindOfClass:[RSFrameInterpolatorInterpolationInstruction class]])
-            {
-                NSLog(@"Failed compositor because non-interpolation");
-                [asyncVideoCompositionRequest finishWithError:[NSError errorWithDomain:@"me.rsullivan.apps.interframe" code:1 userInfo:nil]];
-                return;
-            }
 
-//            NSLog(@"Rendering interpolation frame");
+            NSLog(@"Rendering interpolation frame");
 
-            AVVideoCompositionRenderContext *renderContext = asyncVideoCompositionRequest.renderContext;
+            AVVideoCompositionRenderContext *renderContext = nil;//asyncVideoCompositionRequest.renderContext;
             CVPixelBufferRef inbetweenPixelBuffer = [renderContext newPixelBuffer];
             if (!inbetweenPixelBuffer)
             {
@@ -50,8 +41,9 @@
                 [asyncVideoCompositionRequest finishWithError:[NSError errorWithDomain:@"com.rsullivan.apps.interframe" code:2 userInfo:nil]];
                 return;
             }
-            CVImageBufferRef priorPixelBuffer = [asyncVideoCompositionRequest sourceFrameByTrackID:currentInstruction.priorID];
-            CVImageBufferRef nextPixelBuffer = [asyncVideoCompositionRequest sourceFrameByTrackID:currentInstruction.nextID];
+//            CVImageBufferRef priorPixelBuffer = [asyncVideoCompositionRequest sourceFrameByTrackID:[currentInstruction priorID]];
+//            CVImageBufferRef nextPixelBuffer = [asyncVideoCompositionRequest sourceFrameByTrackID:[currentInstruction nextID]];
+            CVImageBufferRef priorPixelBuffer = NULL, nextPixelBuffer = NULL;
 
 
 
@@ -72,13 +64,16 @@
     }
 }
 
--(void)renderContextChanged:(AVVideoCompositionRenderContext *)newRenderContext {
+-(void)renderContextChanged:(RSIRenderContext *)newRenderContext {
     NSLog(@"-renderContextChanged");
     // Umm.
 }
 
 /**
  * Pixel format and options
+ *
+ * From http://developer.apple.com/library/mac/documentation/AVFoundation/Reference/AVAssetReaderTrackOutput_Class/Reference/Reference.html:
+ * > If you need to work in the RGB domain is is recommended that on iOS the kCVPixelFormatType_32BGRA value is used, and on OS X kCVPixelFormatType_32ARGB is recommended
  */
 
 -(NSDictionary *)defaultPixelBufferAttributes {

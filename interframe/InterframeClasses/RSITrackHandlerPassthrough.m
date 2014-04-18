@@ -19,9 +19,8 @@
 }
 
 -(void)_mediaDataRequested {
-    NSLog(@"-mediaDataRequested %@", self);
-
     CMSampleBufferRef sampleBuffer = [self.readerOutput copyNextSampleBuffer];
+
     if (!sampleBuffer)
     {
         [self markAsFinished];

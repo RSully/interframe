@@ -7,19 +7,22 @@
 //
 
 #import "RSITrackHandlerInterpolate.h"
+#import "RSIRenderContext.h"
+#import "RSIInterpolationCompositing.h"
 
 @interface RSITrackHandlerInterpolate ()
 
-@property (strong) id<AVVideoCompositing> compositor;
+@property (strong) id<RSIInterpolationCompositing> compositor;
+
+@property (strong) RSIRenderContext *renderContext;
 
 @end
 
 
 @implementation RSITrackHandlerInterpolate
 
--(id)initWithInputTrack:(AVAssetTrack *)inputTrack compositor:(id<AVVideoCompositing>)compositor
+-(id)initWithInputTrack:(AVAssetTrack *)inputTrack compositor:(id<RSIInterpolationCompositing>)compositor
 {
-    NSDictionary *readerSettings = [compositor sourcePixelBufferAttributes];
 
     // Uncomment if we need format/width/height/etc.
 //    CMFormatDescriptionRef formatHint = (__bridge CMFormatDescriptionRef)([inputTrack formatDescriptions][0]);
@@ -33,9 +36,12 @@
 //                                     AVVideoHeightKey: @(inputTrack.naturalSize.height)
 //                                     };
 
-    if ((self = [self _initWithInputTrack:inputTrack readerSettings:readerSettings writerSettings:nil]))
+    if ((self = [self _initWithInputTrack:inputTrack readerSettings:[compositor sourcePixelBufferAttributes] writerSettings:nil]))
     {
         self.compositor = compositor;
+
+        self.renderContext = [[RSIRenderContext alloc] _initWithWriterInput:self.writerInput sourceAttributes:[compositor requiredPixelBufferAttributesForRenderContext]];
+        [compositor renderContextChanged:self.renderContext];
     }
     return self;
 }

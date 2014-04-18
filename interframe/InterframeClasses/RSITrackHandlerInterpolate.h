@@ -7,9 +7,10 @@
 //
 
 #import "RSITrackHandler.h"
+#import "RSIInterpolationCompositing.h"
 
 @interface RSITrackHandlerInterpolate : RSITrackHandler
 
--(id)initWithInputTrack:(AVAssetTrack *)inputTrack compositor:(id<AVVideoCompositing>)compositor;
+-(id)initWithInputTrack:(AVAssetTrack *)inputTrack compositor:(id<RSIInterpolationCompositing>)compositor;
 
 @end

@@ -9,7 +9,8 @@
 #import <Foundation/Foundation.h>
 #import "RSFrameInterpolator.h"
 #import <Accelerate/Accelerate.h>
+#import "RSIInterpolationCompositing.h"
 
-@interface RSFrameInterpolatorDefaultCompositor : NSObject <AVVideoCompositing>
+@interface RSFrameInterpolatorDefaultCompositor : NSObject <RSIInterpolationCompositing>
 
 @end
