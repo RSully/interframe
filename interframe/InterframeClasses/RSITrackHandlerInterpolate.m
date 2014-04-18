@@ -92,9 +92,8 @@
         // TODO: append next to queue
 
 
-        request = [[RSIAsynchronousVideoInterpolationRequest alloc] _initWithInterpolator:self
+        request = [[RSIAsynchronousVideoInterpolationRequest alloc] _initWithTrackHandler:self
                                                                             renderContext:self.renderContext
-                                                                                     time:kCMTimeInvalid // TODO: time maybe? get rid of it?
                                                                                 withPrior:CMSampleBufferGetImageBuffer(priorSampleBuffer)
                                                                                      next:CMSampleBufferGetImageBuffer(sampleBuffer)];
         [self.queueRequests addObject:request];

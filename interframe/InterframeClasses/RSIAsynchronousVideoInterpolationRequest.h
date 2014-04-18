@@ -13,9 +13,8 @@
 
 @interface RSIAsynchronousVideoInterpolationRequest : NSObject
 
--(id)_initWithInterpolator:(RSITrackHandler *)interpolator
+-(id)_initWithTrackHandler:(RSITrackHandler *)handler
              renderContext:(RSIRenderContext *)renderContext
-                      time:(CMTime)time
                  withPrior:(CVPixelBufferRef)prior
                       next:(CVPixelBufferRef)next;
 
@@ -26,7 +25,6 @@
 @property (nonatomic, readonly) CVPixelBufferRef sourceFramePrior;
 @property (nonatomic, readonly) CVPixelBufferRef sourceFrameNext;
 
-@property (nonatomic, readonly) CMTime time;
 @property (nonatomic, strong, readonly) RSIRenderContext *renderContext;
 
 @end
