@@ -42,6 +42,7 @@
 
 -(void)_mediaDataRequested {
     NSLog(@"-mediaDataRequested %@", self);
+    [self markAsFinished];
 }
 
 @end
