@@ -9,7 +9,7 @@
 #import "RSFrameInterpolatorDefaultCompositor.h"
 #import <AppKit/AppKit.h>
 #import "RSFrameInterpolator.h"
-#import "RSIAsynchronousVideoInterpolationRequest.m"
+#import "RSIAsynchronousVideoInterpolationRequest.h"
 
 @interface RSFrameInterpolatorDefaultCompositor () {
     dispatch_queue_t _renderingQueue;
