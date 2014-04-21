@@ -20,7 +20,6 @@
 @property (strong) AVAssetWriterInputPixelBufferAdaptor *writerAdapter;
 
 @property (strong) dispatch_queue_t readingQueue;
-//@property (strong) dispatch_queue_t bufferQueue;
 @property (strong) NSMutableArray *queueRequests;
 @property (strong) NSMutableArray *queueBuffers;
 
@@ -36,7 +35,6 @@
     if ((self = [self _initWithInputTrack:inputTrack readerSettings:[compositor sourcePixelBufferAttributes] writerSettings:nil]))
     {
         self.readingQueue = dispatch_queue_create("me.rsullivan.interframe.interpolateHandler", DISPATCH_QUEUE_SERIAL);
-//        self.bufferQueue = dispatch_queue_create("me.rsullivan.interframe.interpolateHandlerBuffers", DISPATCH_QUEUE_SERIAL);
         self.queueRequests = [NSMutableArray new];
         self.queueBuffers = [NSMutableArray new];
         self.isFinishedReading = NO;
@@ -72,23 +70,30 @@
 }
 
 -(void)videoRequestFinishedCancelled:(RSIAsynchronousVideoInterpolationRequest *)request {
-    [self.queueRequests removeObject:request];
+    @synchronized(self.queueRequests) {
+        [self.queueRequests removeObject:request];
+    }
 }
 -(void)videoRequest:(RSIAsynchronousVideoInterpolationRequest *)request finishedWithFrame:(CVPixelBufferRef)frame {
 
-    [self queueAppendPixelBuffer:frame andTime:request.time];
+    [self queueAppendPixelBuffer:frame andTime:request.time source:@"videRequest:finishedWithFrame:"];
 
-    [self.queueRequests removeObject:request];
+    @synchronized(self.queueRequests) {
+        [self.queueRequests removeObject:request];
+    }
 }
 -(void)videoRequest:(RSIAsynchronousVideoInterpolationRequest *)request finishedWithError:(NSError *)error {
     // TODO: something
-    [self.queueRequests removeObject:request];
+
+    @synchronized(self.queueRequests) {
+        [self.queueRequests removeObject:request];
+    }
 }
 
--(void)queueAppendPixelBuffer:(CVPixelBufferRef)buffer andTime:(CMTime)time {
+-(void)queueAppendPixelBuffer:(CVPixelBufferRef)buffer andTime:(CMTime)time source:(NSString *)source {
     CVPixelBufferRetain(buffer);
     @synchronized(self.queueBuffers) {
-        [self.queueBuffers addObject:@{@"time": [NSValue valueWithCMTime:time], @"buffer": [NSValue valueWithPointer:buffer]}];
+        [self.queueBuffers addObject:@{@"time": [NSValue valueWithCMTime:time], @"buffer": [NSValue valueWithPointer:buffer], @"source": source}];
     }
 }
 
@@ -110,24 +115,18 @@
     {
         CMTime priorTime = CMSampleBufferGetPresentationTimeStamp(priorSampleBuffer);
         CMTime nextTime = CMSampleBufferGetPresentationTimeStamp(sampleBuffer);
-//        CMTime priorDurationMaths = CMTimeSubtract(nextTime, priorTime);
         CMTime inbetweenTime = CMTimeMake(round((priorTime.value + nextTime.value)/2.0), priorTime.timescale);
-
-//        CMTimeShow(priorTime);
-//        CMTimeShow(nextTime);
-//        CMTimeShow(priorDurationMaths);
-//        CMTimeShow(inbetweenTime);
 
         CVImageBufferRef priorPixelBuffer = CMSampleBufferGetImageBuffer(priorSampleBuffer);
         CVImageBufferRef pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer);
 
         if (!wrotePriorSample)
         {
-            [self.writerAdapter appendPixelBuffer:priorPixelBuffer withPresentationTime:priorTime];
+            [self queueAppendPixelBuffer:priorPixelBuffer andTime:priorTime source:@"_readInputMedia"];
 
             wrotePriorSample = YES;
         }
-        [self.writerAdapter appendPixelBuffer:pixelBuffer withPresentationTime:nextTime];
+        [self queueAppendPixelBuffer:pixelBuffer andTime:nextTime source:@"_readInputMedia"];
 
 
         request = [[RSIAsynchronousVideoInterpolationRequest alloc] _initWithTrackHandler:self
@@ -135,7 +134,9 @@
                                                                                      time:inbetweenTime
                                                                                 withPrior:priorPixelBuffer
                                                                                      next:pixelBuffer];
-        [self.queueRequests addObject:request];
+        @synchronized(self.queueRequests) {
+            [self.queueRequests addObject:request];
+        }
         [self.compositor startVideoCompositionRequest:request];
 
         CFRelease(priorSampleBuffer);
@@ -146,7 +147,7 @@
     self.isFinishedReading = YES;
 }
 -(void)_mediaDataRequested {
-//    NSLog(@"-mediaDataRequested %@", self);
+    NSLog(@"-mediaDataRequested %@", self);
 
     if ([self.queueBuffers count])
     {
@@ -156,10 +157,17 @@
             [self.queueBuffers removeObjectAtIndex:0];
         }
 
-        CMTime time = [(NSValue *)[vals objectForKey:@"time"] CMTimeValue];
-        CVPixelBufferRef buffer = [(NSValue *)[vals objectForKey:@"buffer"] pointerValue];
+        CMTime time = [(NSValue *)vals[@"time"] CMTimeValue];
+        CVPixelBufferRef buffer = [(NSValue *)vals[@"buffer"] pointerValue];
 
-        [self.writerAdapter appendPixelBuffer:buffer withPresentationTime:time];
+        NSLog(@"WRITING FOR TIME %f %@", CMTimeGetSeconds(time), vals[@"source"]);
+        if (![vals[@"source"] isEqualToString:@"_readInputMedia"]){
+        BOOL appended = [self.writerAdapter appendPixelBuffer:buffer withPresentationTime:time];
+        if (!appended)
+        {
+            NSLog(@"WRITE FAILED OMG %p", self.writerAdapter.pixelBufferPool);
+        }
+        }
 
         CVPixelBufferRelease(buffer);
     }
