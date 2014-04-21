@@ -22,11 +22,10 @@ int main(int argc, const char * argv[])
 
         NSURL *inputUrl = [NSURL fileURLWithPath:[NSString stringWithUTF8String:argv[1]]];
         NSURL *outputUrl = [NSURL fileURLWithPath:[NSString stringWithUTF8String:argv[2]]];
+
         [[NSFileManager defaultManager] removeItemAtURL:outputUrl error:nil];
 
-        AVURLAsset *input = [AVURLAsset assetWithURL:inputUrl];
-
-        RSExampleInterpolator *example = [[RSExampleInterpolator alloc] initWithAsset:input output:outputUrl];
+        RSExampleInterpolator *example = [[RSExampleInterpolator alloc] initWithInput:inputUrl output:outputUrl];
         [example interpolate];
 
         [[NSRunLoop currentRunLoop] run];

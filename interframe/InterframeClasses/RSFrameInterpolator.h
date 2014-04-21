@@ -9,29 +9,23 @@
 #import <Foundation/Foundation.h>
 #import <CoreGraphics/CoreGraphics.h>
 #import <AVFoundation/AVFoundation.h>
-#import "RSFrameInterpolationState.h"
+#import "RSIInterpolationCompositing.h"
 
 @class RSFrameInterpolator;
 
 @protocol RSFrameInterpolatorDelegate <NSObject>
 -(void)interpolatorFinished:(RSFrameInterpolator *)interpolator;
-@end
-
-@protocol RSFrameInterpolatorSource <NSObject>
--(CGImageRef)newInterpolatedImageForInterpolator:(RSFrameInterpolator *)interpolator
-                                       withState:(RSFrameInterpolationState *)state;
+-(void)interpolatorFailed:(RSFrameInterpolator *)interpolator withError:(NSError *)error;
 @end
 
 
 @interface RSFrameInterpolator : NSObject
 
--(id)initWithAsset:(AVAsset *)asset output:(NSURL *)output;
+-(id)initWithInput:(NSURL *)input output:(NSURL *)output;
 
--(void)interpolate;
+-(void)interpolateAsynchronously;
 
-@property CGImageRef placeholderInterpolatedImage;
-
+@property Class<RSIInterpolationCompositing> customCompositor;
 @property (weak) id<RSFrameInterpolatorDelegate> delegate;
-@property (weak) id<RSFrameInterpolatorSource> source;
 
 @end
