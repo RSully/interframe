@@ -51,12 +51,12 @@
 }
 
 
-
 -(void)interpolateAsynchronously {
     dispatch_async(self.interpolationQueue, ^{
         [self _interpolate];
     });
 }
+
 -(void)_interpolate {
 
     /*
@@ -105,18 +105,17 @@
         }
 
 
-        // Check for adding problems
+        // Check for adding problems, and add ins/outs
         if (![reader canAddOutput:trackHandler.readerOutput])
         {
             NSLog(@"Cannot add output to reader: %@", trackHandler.readerOutput);
         }
+        [reader addOutput:trackHandler.readerOutput];
+
         if (![writer canAddInput:trackHandler.writerInput])
         {
             NSLog(@"Cannot add input to writer: %@", trackHandler.writerInput);
         }
-
-        // Add ins/outs
-        [reader addOutput:trackHandler.readerOutput];
         [writer addInput:trackHandler.writerInput];
 
 
@@ -153,15 +152,19 @@
     dispatch_group_wait(trackHandlerGroup, DISPATCH_TIME_FOREVER);
 
     [writer finishWritingWithCompletionHandler:^{
-        dispatch_sync(dispatch_get_main_queue(), ^{
+        // I don't think this matters sync/async
+        dispatch_async(dispatch_get_main_queue(), ^{
             NSLog(@"-finishWritingWithCompletionHandler %ld", writer.status);
+            if (writer.status != AVAssetWriterStatusCompleted) {
+                NSLog(@"%@", writer.error);
+            }
             [self.delegate interpolatorFinished:self];
         });
     }];
 
 }
 
-#pragma mark Methods used for -interpolateToOutput:
+#pragma mark Methods used for -_interpolate
 
 -(id<RSIInterpolationCompositing>)newCompositor {
     Class compositorClass = self.customCompositor;
