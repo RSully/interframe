@@ -167,15 +167,23 @@
 		2B16EB6118F596B5000BA5AD /* Compositing */ = {
 			isa = PBXGroup;
 			children = (
+				2B16EB5E18F596AD000BA5AD /* RSFrameInterpolatorDefaultCompositor.h */,
+				2B16EB5F18F596AD000BA5AD /* RSFrameInterpolatorDefaultCompositor.m */,
+				2B557D1419056813001A4032 /* Custom */,
+			);
+			name = Compositing;
+			sourceTree = "<group>";
+		};
+		2B557D1419056813001A4032 /* Custom */ = {
+			isa = PBXGroup;
+			children = (
 				2B1D19691900AEA000A3F7FF /* RSIInterpolationCompositing.h */,
 				2B1D19661900AD3100A3F7FF /* RSIRenderContext.h */,
 				2B1D19671900AD3100A3F7FF /* RSIRenderContext.m */,
 				2B1D196A190165A900A3F7FF /* RSIAsynchronousVideoInterpolationRequest.h */,
 				2B1D196B190165A900A3F7FF /* RSIAsynchronousVideoInterpolationRequest.m */,
-				2B16EB5E18F596AD000BA5AD /* RSFrameInterpolatorDefaultCompositor.h */,
-				2B16EB5F18F596AD000BA5AD /* RSFrameInterpolatorDefaultCompositor.m */,
 			);
-			name = Compositing;
+			name = Custom;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
